@@ -4,11 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "tail": "tail -n 2 -f log.log | node --enable-source-maps build/server.js",
-    "start": "concurrently 'npm:server:dev' 'npm:public:dev'",
+    "tail": "tail -n 100000000 -f log.log | node --enable-source-maps build/server.js",
+    "start": "concurrently 'npm:tsc-watch' 'npm:public:dev'",
     "tsc-watch": "tsc-watch --outDir build --noClear --onSuccess 'npm run tail'",
-    "server:dev": "tail -n 5 -f log.log | ts-node src/server.ts",
-    "public:dev": "parcel public/index.html --open",
+    "public:dev": "cd svelte && npm run dev",
+    "echo": "echo \"{ '(date -Ins)' timestamp: '2021-02-13T17:48:32.841Z',  level: 'INFO',  message: 'Finished job execution5'}\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
