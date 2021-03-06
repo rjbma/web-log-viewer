@@ -1,5 +1,4 @@
 import { map, runEffects, tap } from "@most/core";
-import * as most from "@most/core";
 import { newDefaultScheduler } from "@most/scheduler";
 import express from "express";
 import http from "http";
@@ -7,6 +6,7 @@ import { pipe } from "ramda";
 import WebSocket from "ws";
 import { createReadlineStream } from "./stream-utils";
 import json5 from "json5";
+import { LogMessage, ServerMessage } from "./types";
 
 const LOG_WINDOW_SIZE = 100;
 
@@ -14,18 +14,17 @@ type ClientStatus =
   | { mode: "tail" }
   | {
       mode: "static";
+      // the `seq` of the first message the client is locked on
       start: number;
     };
 const clients: ClientStatus[] = [];
 
 type RawMessage = string;
-type LogMessage = Record<string, any> & { __seq: number };
-// the message sent to clients that just connected. Contains the last logs, since new clients always start in 'tail' mode
-type InitMessage = { type: "init"; size: number; window: LogMessage[] };
-// the message sent to all clients once a new message comes in from stdin
-type UpdateMessage = { type: "update"; size: number; message: LogMessage };
-// all messages in the direction Server -> Client
-type ServerMessage = InitMessage | UpdateMessage;
+
+// signal when a client wants to switch modes
+type ClientMessage = StaticClientMessage | TailClientMessage;
+type StaticClientMessage = { mode: "static"; offsetSeq: number };
+type TailClientMessage = { mode: "tail" };
 
 /**Contains all the logs that came into the server up untill now */
 const logs: LogMessage[] = [];
@@ -71,7 +70,7 @@ const setupLogStream = () =>
       return msg;
     }),
     tap((rawLog: LogMessage) => {
-      const updateMsg: UpdateMessage = {
+      const updateMsg: ServerMessage = {
         type: "update",
         size: logs.length,
         message: rawLog,
@@ -101,12 +100,37 @@ function setupNewClient(ws: WebSocket) {
   clients.push({ mode: "tail" });
 
   // send a window with the last logs to newly registered clients
-  const initMsg: InitMessage = {
-    type: "init",
-    size: logs.length,
-    window: logs.slice(-LOG_WINDOW_SIZE),
-  };
-  ws.send(encode(initMsg));
+  ws.send(encode(buildInitMessage()));
+
+  ws.on("message", (encodedMsg) => {
+    const msg = decode(encodedMsg) as ClientMessage;
+    if (msg.mode == "tail") {
+      ws.send(encode(buildInitMessage()));
+    } else if (msg.mode == "static") {
+      ws.send(
+        encode({
+          type: "init",
+          mode: "static",
+          size: logs.length,
+          window: logs.slice(
+            msg.offsetSeq - LOG_WINDOW_SIZE / 2,
+            msg.offsetSeq + LOG_WINDOW_SIZE / 2
+          ),
+        })
+      );
+    }
+  });
+
+  function buildInitMessage(): ServerMessage {
+    return {
+      type: "init",
+      mode: "tail",
+      size: logs.length,
+      window: logs.slice(-LOG_WINDOW_SIZE),
+    };
+  }
 }
 
 const encode = (data: ServerMessage) => JSON.stringify(data);
+const decode = (data: WebSocket.Data): ClientMessage =>
+  JSON.parse(data.toString("utf-8"));
