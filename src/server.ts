@@ -61,9 +61,12 @@ const setupLogStream = () =>
     () => createReadlineStream(),
     // map(transformLogLine(config)),
     // tap((l) => console.log("received from stdin", l)),
-    map(parseRawMessage),
-    map(msg => {
-      msg.__seq = logs.length + 1
+    // map(parseRawMessage),
+    map(rawMessage => {
+      const msg: LogMessage = {
+        seq: logs.length + 1,
+        data: parseRawMessage(rawMessage),
+      }
       logs.push(msg)
       return msg
     }),

@@ -56,7 +56,7 @@ function createLogStore(formatter: LogFormatter) {
             count: msg.size,
             columns,
             window: msg.window.map(logFormatter),
-            offsetSeq: msg.window.length ? msg.window[0].__seq : 0,
+            offsetSeq: msg.window.length ? msg.window[0].seq : 0,
             latest: [],
           }
         }
@@ -106,17 +106,20 @@ function createLogStore(formatter: LogFormatter) {
 
 const encode = (data: any) => JSON.stringify(data)
 const decode = (data: string) => JSON.parse(data)
-const formatLogMessage = (formatter: LogFormatter) => (msg: LogMessage): FormattedMessage =>
-  Object.keys(formatter).reduce(
+const formatLogMessage = (formatter: LogFormatter) => (msg: LogMessage): FormattedMessage => ({
+  seq: msg.seq,
+  data: Object.keys(formatter).reduce(
     (acc, key) => ({
       ...acc,
       [key]: execFn(formatter[key], msg),
     }),
-    { __seq: msg.__seq },
-  )
-const execFn = (fn: (msg: LogMessage) => any, msg: LogMessage) => {
+    {},
+  ),
+})
+
+const execFn = (fn: (msg: LogMessage['data'], seq: number) => any, msg: LogMessage) => {
   try {
-    return fn(msg)
+    return fn(msg.data, msg.seq)
   } catch (err) {
     return ''
   }

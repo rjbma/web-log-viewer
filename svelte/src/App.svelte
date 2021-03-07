@@ -24,7 +24,7 @@
     if (!logWindow || !logWindow.length) {
       return 0;
     } else {
-      return (logWindow[0].__seq - 1) * ROW_HEIGHT;
+      return (logWindow[0].seq - 1) * ROW_HEIGHT;
     }
   }
 
@@ -36,7 +36,7 @@
     if (!logWindow || !logWindow.length) {
       return 0;
     } else {
-      const lastSeqInWindow = logWindow[logWindow.length - 1].__seq;
+      const lastSeqInWindow = logWindow[logWindow.length - 1].seq;
       return (logCount - lastSeqInWindow) * ROW_HEIGHT;
     }
   }
@@ -73,7 +73,6 @@
     <table class="windowLogs-table">
       <thead>
         <tr style="height: {ROW_HEIGHT}px">
-          <th>#</th>
           {#each $logStore.columns as col}
             <th>{col}</th>
           {/each}
@@ -84,11 +83,10 @@
           class="windowLogs-beforeWindowRow"
           style="height: {calcBeforeWindowRowHeigh($logStore.window)}px"
         />
-        {#each $logStore.window as msg (msg.__seq)}
+        {#each $logStore.window as msg (msg.seq)}
           <tr style="height: {ROW_HEIGHT}px">
-            <td> {msg.__seq}</td>
-            {#each $logStore.columns as col}
-              <td>{msg[col]}</td>
+            {#each $logStore.columns as col (col)}
+              <td>{msg.data[col]}</td>
             {/each}
           </tr>
         {/each}

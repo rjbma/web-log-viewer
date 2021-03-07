@@ -1,7 +1,7 @@
 // @ts-check
 
 module.exports = {
-  '#': l => l.__seq,
+  '#': (l, seq) => seq,
   level: l => l.level,
   timestamp: l => l.timestamp.substring(0, 20).replace('T', ' '),
   message: l => l.message,
