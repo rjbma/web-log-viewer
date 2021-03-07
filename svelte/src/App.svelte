@@ -115,6 +115,7 @@
     white-space: nowrap;
     text-align: left;
     border-collapse: collapse;
+    position: relative;
   }
   .windowLogs-table tbody tr {
     height: 20px;
@@ -122,6 +123,12 @@
   .windowLogs-table td,
   .windowLogs-table th {
     padding: 2px 7px;
+  }
+  .windowLogs-table th {
+    position: sticky;
+    top: 0px;
+    background-color: white;
+    padding: 20px 7px;
   }
   .windowLogs-table td {
     border-top: 1px dashed #dedede;
