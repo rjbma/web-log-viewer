@@ -1,6 +1,6 @@
 <script lang="ts">
   import { logStore } from "./log-store";
-  import type { LogMessage } from "./types";
+  import type { FormattedMessage } from "./types";
 
   // height of each row, in pixels
   const ROW_HEIGHT = 30;
@@ -20,7 +20,7 @@
   }
 
   // TODO can be memoized
-  function calcBeforeWindowRowHeigh(logWindow: LogMessage[]) {
+  function calcBeforeWindowRowHeigh(logWindow: FormattedMessage[]) {
     if (!logWindow || !logWindow.length) {
       return 0;
     } else {
@@ -29,7 +29,10 @@
   }
 
   // TODO can be memoized
-  function calcAfterWindowRowHeight(logWindow: LogMessage[], logCount: number) {
+  function calcAfterWindowRowHeight(
+    logWindow: FormattedMessage[],
+    logCount: number
+  ) {
     if (!logWindow || !logWindow.length) {
       return 0;
     } else {

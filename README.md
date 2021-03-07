@@ -9,3 +9,4 @@
     - the client (svelte) should be able to retores the connection with the server when it is available again
     - security when accessing the logs?
     - docker file to run the log viewer
+    - `src/types.ts` is currently a symbolic link!
