@@ -1,0 +1,11 @@
+# Issues
+- breaks when we scroll all the way to the top
+- log format should be `{seq: 123, data: {...}}`
+- should accept a transformer function that maps a single line from `stdin` into a list of `RawMessage`s. Some examples would be:
+    - 1:1 mapping (the default) would not do any transformations. For when we have a log file with JSON (or JSON5) format
+    - 1:1 mapping, transforming a textual (e.g., `log4j`) log file into JSON
+    - 1:n mapping, transforming a JSON file, wich potentially included lots of information in arrays, into a list of `RawMessage`s
+    - the client (svelte) should display the status of the connection with the server
+    - the client (svelte) should be able to retores the connection with the server when it is available again
+    - security when accessing the logs?
+    - docker file to run the log viewer

@@ -3,6 +3,12 @@ type OperationMode = "static" | "tail";
 /**A log message has sent by the server to the clients */
 type LogMessage = Record<string, any> & { __seq: number };
 
+/**A log message that's already been formatted and ready to be displayed */
+type FormattedMessage = Record<string, (l: LogMessage) => any>;
+
+/**A function that formats a log message */
+type LogFormatter = (message: LogMessage) => Record<string, any>;
+
 // ***
 // SERVER MESSAGES
 // ***
@@ -25,4 +31,10 @@ type TailClientMessage = { mode: "tail" };
 /**Messages sent from the client to the server, basically to signal it want to swith operation mode */
 type ClientMessage = StaticClientMessage | TailClientMessage;
 
-export type { LogMessage, ServerMessage, ClientMessage };
+export type {
+  LogMessage,
+  FormattedMessage,
+  LogFormatter,
+  ServerMessage,
+  ClientMessage,
+};

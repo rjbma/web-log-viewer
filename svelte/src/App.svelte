@@ -1,6 +1,6 @@
 <script lang="ts">
   import { logStore } from "./log-store";
-  import type { LogMessage } from "./log-store";
+  import type { LogMessage } from "./types";
 
   // height of each row, in pixels
   const ROW_HEIGHT = 30;
@@ -71,8 +71,9 @@
       <thead>
         <tr style="height: {ROW_HEIGHT}px">
           <th>#</th>
-          <th>Time</th>
-          <th>Message</th>
+          {#each $logStore.columns as col}
+            <th>{col}</th>
+          {/each}
         </tr>
       </thead>
       <tbody>
@@ -83,8 +84,9 @@
         {#each $logStore.window as msg (msg.__seq)}
           <tr style="height: {ROW_HEIGHT}px">
             <td> {msg.__seq}</td>
-            <td> {msg.timestamp}</td>
-            <td> {msg.message}</td>
+            {#each $logStore.columns as col}
+              <td>{msg[col]}</td>
+            {/each}
           </tr>
         {/each}
         <tr
