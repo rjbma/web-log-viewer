@@ -1,5 +1,4 @@
 # Issues
-- breaks when we scroll all the way to the top
 - log format should be `{seq: 123, data: {...}}`
 - should accept a transformer function that maps a single line from `stdin` into a list of `RawMessage`s. Some examples would be:
     - 1:1 mapping (the default) would not do any transformations. For when we have a log file with JSON (or JSON5) format
