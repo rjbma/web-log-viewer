@@ -111,8 +111,7 @@ function setupNewClient(ws: WebSocket) {
           mode: 'static',
           size: logs.length,
           window: logs.slice(
-            // Math.max(msg.offsetSeq - LOG_WINDOW_SIZE / 2, 0),
-            msg.offsetSeq - LOG_WINDOW_SIZE / 2,
+            Math.max(msg.offsetSeq - LOG_WINDOW_SIZE / 2, 0),
             msg.offsetSeq + LOG_WINDOW_SIZE / 2,
           ),
         }),

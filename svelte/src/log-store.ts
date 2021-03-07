@@ -112,7 +112,7 @@ const formatLogMessage = (formatter: LogFormatter) => (msg: LogMessage): Formatt
       ...acc,
       [key]: execFn(formatter[key], msg),
     }),
-    { __seq: () => msg.__seq },
+    { __seq: msg.__seq },
   )
 const execFn = (fn: (msg: LogMessage) => any, msg: LogMessage) => {
   try {
