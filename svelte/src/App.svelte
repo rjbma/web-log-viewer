@@ -106,7 +106,6 @@
   .windowLogs {
     height: 500px;
     overflow: auto;
-    width: 900px;
     margin: auto;
   }
 
@@ -116,6 +115,7 @@
     text-align: left;
     border-collapse: collapse;
     position: relative;
+    width: 100%;
   }
   .windowLogs-table tbody tr {
     height: 20px;
@@ -123,6 +123,8 @@
   .windowLogs-table td,
   .windowLogs-table th {
     padding: 2px 7px;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .windowLogs-table th {
     position: sticky;
@@ -136,8 +138,7 @@
 
   main {
     text-align: center;
-    padding: 1em;
-    max-width: 240px;
+    padding: 1em 1em;
     margin: 0 auto;
   }
 
@@ -146,11 +147,5 @@
     text-transform: uppercase;
     font-size: 4em;
     font-weight: 100;
-  }
-
-  @media (min-width: 640px) {
-    main {
-      max-width: none;
-    }
   }
 </style>

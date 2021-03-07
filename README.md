@@ -10,3 +10,8 @@
     - `src/types.ts` is currently a symbolic link!
 - click to see the full log
 - grouping rows (e.g., by transaction ID)
+- filtering by text
+- filtering by timestamp
+- UI design
+- log line color
+- possibility to return a primary and secondary value for each column (maybe a color, css, or whatever?), width, ...

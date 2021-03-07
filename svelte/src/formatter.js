@@ -6,4 +6,5 @@ module.exports = {
   timestamp: l => l.timestamp.substring(0, 20).replace('T', ' '),
   message: l => l.message,
   bank: l => l.additionalInfo.bankName,
+  url: l => l.additionalInfo.url,
 }
