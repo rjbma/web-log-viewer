@@ -1,5 +1,11 @@
 import { writable } from 'svelte/store'
-import type { FormattedMessage, LogFormatter, LogMessage, ServerMessage } from './types'
+import type {
+  FormattedMessage,
+  LogColumnFormatter,
+  LogFormatter,
+  LogMessage,
+  ServerMessage,
+} from './types'
 import logFormatter from './formatter'
 
 interface TailLogStore {
@@ -108,7 +114,8 @@ const encode = (data: any) => JSON.stringify(data)
 const decode = (data: string) => JSON.parse(data)
 const formatLogMessage = (formatter: LogFormatter) => (msg: LogMessage): FormattedMessage => ({
   seq: msg.seq,
-  data: Object.keys(formatter).reduce(
+  rawMessage: msg.data,
+  formattedMessage: Object.keys(formatter).reduce(
     (acc, key) => ({
       ...acc,
       [key]: execFn(formatter[key], msg),
@@ -117,7 +124,7 @@ const formatLogMessage = (formatter: LogFormatter) => (msg: LogMessage): Formatt
   ),
 })
 
-const execFn = (fn: (msg: LogMessage['data'], seq: number) => any, msg: LogMessage) => {
+const execFn = (fn: LogColumnFormatter, msg: LogMessage) => {
   try {
     return fn(msg.data, msg.seq)
   } catch (err) {

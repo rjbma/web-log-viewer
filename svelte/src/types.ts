@@ -4,10 +4,15 @@ type OperationMode = 'static' | 'tail'
 type LogMessage = { seq: number; data: Record<string, any> }
 
 /**A log message that's already been formatted and ready to be displayed */
-type FormattedMessage = LogMessage
+type FormattedMessage = {
+  seq: number
+  rawMessage: Record<string, any>
+  formattedMessage: Record<string, any>
+}
 
 /**A function that formats a log message */
-type LogFormatter = (message: LogMessage) => Record<string, any>
+type LogFormatter = Record<string, LogColumnFormatter>
+type LogColumnFormatter = (message: LogMessage['data'], seq: number) => any
 
 // ***
 // SERVER MESSAGES
@@ -31,4 +36,11 @@ type TailClientMessage = { mode: 'tail' }
 /**Messages sent from the client to the server, basically to signal it want to swith operation mode */
 type ClientMessage = StaticClientMessage | TailClientMessage
 
-export type { LogMessage, FormattedMessage, LogFormatter, ServerMessage, ClientMessage }
+export type {
+  LogMessage,
+  FormattedMessage,
+  LogFormatter,
+  LogColumnFormatter,
+  ServerMessage,
+  ClientMessage,
+}
