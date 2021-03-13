@@ -1,12 +1,9 @@
-import App from "./App.svelte";
+import App from './App.svelte'
 
 const app = new App({
   target: document.body,
-  props: {
-    messages: [],
-    name: "world",
-  },
-});
+  props: {},
+})
 
 // type LogMessage = Record<string, any> & { __seq: number };
 // // the message sent to clients that just connected. Contains the last logs, since new clients always start in 'tail' mode
@@ -44,4 +41,4 @@ const app = new App({
 
 // const decode = (data: string) => JSON.parse(data);
 
-export default app;
+export default app

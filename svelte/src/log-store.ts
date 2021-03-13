@@ -1,3 +1,4 @@
+import memoizeOne from 'memoize-one'
 import { writable } from 'svelte/store'
 import type {
   FormattedMessage,
@@ -6,11 +7,11 @@ import type {
   LogMessage,
   ServerMessage,
 } from './types'
-import logFormatter from './formatter'
 
 interface TailLogStore {
   mode: 'tail'
   count: number
+  formatter: string
   columns: string[]
   window: FormattedMessage[]
   latest: FormattedMessage[]
@@ -19,23 +20,39 @@ interface StaticLogStore {
   mode: 'static'
   offsetSeq: number
   count: number
+  formatter: string
   columns: string[]
   window: FormattedMessage[]
   latest: FormattedMessage[]
 }
+/**
+ * A `LogStore` object contains all the state of the application.
+ * It can be saved (e.g., to **localStorage**) and later used to restore the app to a known state) */
 type LogStore = TailLogStore | StaticLogStore
 
 const LOG_WINDOW_SIZE = 100
 const LATEST_LOG_WINDOW_SIZE = 2
+const DEFAULT_LOG_FORMATTER = `
+  ({
+    '#': (l, seq) => seq,
+    level: l => l.level,
+    timestamp: l => l.timestamp.substring(0, 19).replace('T', ' '),
+    message: l => l.message,
+    bank: l => l.additionalInfo.bankName,
+    url: l => l.additionalInfo.url,
+  })`
 
-function createLogStore(formatter: LogFormatter) {
-  const columns = Object.keys(formatter)
-  const initialValue: LogStore = {
-    mode: 'tail',
-    count: 0,
-    columns,
-    window: [],
-    latest: [],
+function createLogStore(initialValue?: LogStore) {
+  // use default values, if needed
+  if (!initialValue) {
+    initialValue = {
+      mode: 'tail',
+      count: 0,
+      formatter: DEFAULT_LOG_FORMATTER,
+      columns: [],
+      window: [],
+      latest: [],
+    }
   }
   const { subscribe, update } = writable<LogStore>(initialValue)
 
@@ -45,13 +62,15 @@ function createLogStore(formatter: LogFormatter) {
   }
   ws.onmessage = function (e) {
     const msg = decode(e.data) as ServerMessage
-    const logFormatter = formatLogMessage(formatter)
     update(currentValue => {
+      const columns = Object.keys(toFormatterObj(currentValue.formatter))
+      const logFormatter = formatLogMessage(currentValue.formatter)
       if (msg.type === 'init') {
         if (msg.mode === 'tail') {
           return {
             mode: msg.mode,
             count: msg.size,
+            formatter: currentValue.formatter,
             columns,
             window: msg.window.map(logFormatter),
             latest: [],
@@ -60,6 +79,7 @@ function createLogStore(formatter: LogFormatter) {
           return {
             mode: msg.mode,
             count: msg.size,
+            formatter: currentValue.formatter,
             columns,
             window: msg.window.map(logFormatter),
             offsetSeq: msg.window.length ? msg.window[0].seq : 0,
@@ -107,22 +127,38 @@ function createLogStore(formatter: LogFormatter) {
 
       ws.send(encode({ mode: 'static', offsetSeq }))
     },
+    changeFormatter: (newFormatter: string) => {
+      update(state => {
+        // re-fetch data from the server so it can be formatted with the new formatter
+        ws.send(encode({ mode: state.mode }))
+
+        // save the new formatter
+        return {
+          ...state,
+          window: [],
+          formatter: newFormatter,
+        }
+      })
+    },
   }
 }
 
 const encode = (data: any) => JSON.stringify(data)
 const decode = (data: string) => JSON.parse(data)
-const formatLogMessage = (formatter: LogFormatter) => (msg: LogMessage): FormattedMessage => ({
-  seq: msg.seq,
-  rawMessage: msg.data,
-  formattedMessage: Object.keys(formatter).reduce(
-    (acc, key) => ({
-      ...acc,
-      [key]: execFn(formatter[key], msg),
-    }),
-    {},
-  ),
-})
+const formatLogMessage = (formatterStr: string) => {
+  const formatter = toFormatterObj(formatterStr)
+  return (msg: LogMessage): FormattedMessage => ({
+    seq: msg.seq,
+    rawMessage: msg.data,
+    formattedMessage: Object.keys(formatter).reduce(
+      (acc, key) => ({
+        ...acc,
+        [key]: execFn(formatter[key], msg),
+      }),
+      {},
+    ),
+  })
+}
 
 const execFn = (fn: LogColumnFormatter, msg: LogMessage) => {
   try {
@@ -132,5 +168,19 @@ const execFn = (fn: LogColumnFormatter, msg: LogMessage) => {
   }
 }
 
-const logStore = createLogStore(logFormatter)
+const toFormatterObj = memoizeOne(
+  (formatter: string): LogFormatter => {
+    let result
+    try {
+      result = eval(formatter)
+    } catch (err) {
+      console.error('Invalid formatter object. Reverting to default format')
+      console.log(err)
+      result = eval(DEFAULT_LOG_FORMATTER)
+    }
+    return result
+  },
+)
+
+const logStore = createLogStore()
 export { logStore }

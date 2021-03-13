@@ -1,4 +1,5 @@
 <script lang="ts">
+  import FormatterConfig from './FormatterConfig.svelte'
   import { logStore } from './log-store'
   import LogMessageDetails from './LogMessageDetails.svelte'
   import type { FormattedMessage, LogMessage } from './types'
@@ -7,6 +8,7 @@
   const ROW_HEIGHT = 30
 
   let logMessageBeingViewed: FormattedMessage
+  let isConfiguringFormatter: boolean
 
   // scroll to bottom when new logs come in while on tail mode
   logStore.subscribe(logs => {
@@ -67,6 +69,20 @@
 </script>
 
 <main>
+  <!-- show a modal that allows the user to change the log formatter -->
+  {#if isConfiguringFormatter}
+    <FormatterConfig
+      formatter={$logStore.formatter}
+      on:close={e => {
+        if (e.detail?.newFormatter) {
+          logStore.changeFormatter(e.detail.newFormatter)
+        }
+        isConfiguringFormatter = false
+      }}
+    />
+  {/if}
+
+  <!-- show a modal with details on the currently selected message -->
   {#if logMessageBeingViewed}
     <LogMessageDetails
       logMessage={logMessageBeingViewed}
@@ -82,6 +98,9 @@
     apps.
   </p>
   <h1>Log <small>{$logStore.count} items</small></h1>
+
+  <button type="button" on:click={() => (isConfiguringFormatter = true)}>Config</button>
+
   <label><input type="checkbox" checked={$logStore.mode == 'tail'} disabled />Follow log?</label>
   <section id="windowLogs" class="windowLogs" on:scroll={onScroll}>
     <table class="windowLogs-table">

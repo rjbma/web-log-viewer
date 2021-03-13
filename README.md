@@ -8,10 +8,10 @@
     - security when accessing the logs?
     - docker file to run the log viewer
     - `src/types.ts` is currently a symbolic link!
-- click to see the full log
 - grouping rows (e.g., by transaction ID)
 - filtering by text
 - filtering by timestamp
 - UI design
 - log line color
 - possibility to return a primary and secondary value for each column (maybe a color, css, or whatever?), width, ...
+- use https://developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Language_Bindings/Components.utils.Sandbox? 

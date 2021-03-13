@@ -4,10 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "tail": "tail -n 1000 -f log.log | node --inspect=0 --enable-source-maps build/server.js",
+    "tail": "tail -n 100000 -f http.log | node --inspect=0 --enable-source-maps build/server.js",
     "cat": "cat log.log | node --inspect=0 --enable-source-maps build/server.js",
     "start": "concurrently 'npm:tsc-watch' 'npm:public:dev'",
-    "tsc-watch": "tsc-watch --outDir build --noClear --onSuccess 'npm run cat'",
+    "tsc-watch": "tsc-watch --outDir build --noClear --onSuccess 'npm run tail'",
     "public:dev": "cd svelte && npm run dev",
     "echo": "echo \"{ '(date -Ins)' timestamp: '2021-02-13T17:48:32.841Z',  level: 'INFO',  message: 'Finished job execution5'}\"",
     "test": "echo \"Error: no test specified\" && exit 1"
