@@ -73,13 +73,13 @@
       logMessage={logMessageBeingViewed}
       logSize={$logStore.count}
       formatter={$logStore.formatter}
-      on:close={() => (logMessageBeingViewed = undefined)}
       on:viewPrevious={() => viewRelativeLog(-1)}
       on:viewNext={() => viewRelativeLog(1)}
-      on:updateFormatter={e => {
+      on:closeAndUpdateFormatter={e => {
         if (e.detail?.newFormatter) {
           logStore.changeFormatter(e.detail.newFormatter)
         }
+        logMessageBeingViewed = undefined
       }}
     />
   {/if}

@@ -85,6 +85,15 @@ const setupLogStream = () =>
 const parseRawMessage = (rl: RawMessage) => {
   try {
     const msg = json5.parse(rl)
+    if (msg.message?.request?.headers) {
+      msg.message.request.headers = json5.parse(msg.message.request.headers)
+    }
+    if (msg.message?.response?.headers) {
+      msg.message.response.headers = json5.parse(msg.message.response.headers)
+    }
+    if (msg.message?.response?.body) {
+      msg.message.response.body = json5.parse(msg.message.response.body)
+    }
     return msg
   } catch (err) {
     const msg = { message: rl }

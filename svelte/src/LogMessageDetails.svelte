@@ -8,8 +8,7 @@
   export let formatter: string
 
   const dispatch = createEventDispatcher()
-  const closeDialog = () => dispatch('close')
-  const updateFormatter = () => dispatch('updateFormatter', { newFormatter: formatter })
+  const closeDialog = () => dispatch('closeAndUpdateFormatter', { newFormatter: formatter })
   const formatObject = (obj: any) => {
     if (typeof obj == 'string') {
       return obj
