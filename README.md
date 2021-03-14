@@ -15,3 +15,6 @@
 - log line color
 - possibility to return a primary and secondary value for each column (maybe a color, css, or whatever?), width, ...
 - use https://developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Language_Bindings/Components.utils.Sandbox? 
+- use solarized css?
+- auto-save to local storage
+- revert to default formatter

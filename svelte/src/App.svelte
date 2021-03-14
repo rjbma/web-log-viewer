@@ -134,8 +134,13 @@
 </main>
 
 <style>
+  main {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
   .windowLogs {
-    height: 500px;
+    height: 100%;
     overflow: auto;
     margin: auto;
   }
