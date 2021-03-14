@@ -74,7 +74,8 @@ button:focus {
 	--gray-800: #3A435A;
 	--gray-600: #61697B;
 	--gray-400: #9CA1AC;
-	--gray-200: #EBECEF;
+	--gray-200: #E1E3E6;
+	--gray-100: #F5F6F7;
 }
 .button {
 	border-color: var(--primary-color);

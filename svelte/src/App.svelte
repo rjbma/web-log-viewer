@@ -144,7 +144,8 @@
     table-layout: fixed;
     white-space: nowrap;
     text-align: left;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
     position: relative;
     width: 100%;
     font-size: 14px;
@@ -158,11 +159,34 @@
   .windowLogs-table th {
     position: sticky;
     top: 0px;
-    background-color: var(--gray-200);
+    background-color: var(--gray-100);
     padding: 10px 7px;
+    border-top: 1px solid var(--gray-200);
+    border-bottom: 1px solid var(--gray-200);
+    color: var(--primary-color);
+    font-weight: 500;
+    letter-spacing: 0.9px;
+    font-size: 16px;
+  }
+  .windowLogs-table th:first-child {
+    border-top-left-radius: 5px;
+    border-left: 1px solid var(--gray-200);
+  }
+  .windowLogs-table th:last-child {
+    border-top-right-radius: 5px;
+    border-right: 1px solid var(--gray-200);
+  }
+  .windowLogs-table tr:hover td {
+    background-color: var(--gray-100);
   }
   .windowLogs-table td {
-    border-top: 1px dashed #dedede;
+    border-top: 1px solid var(--gray-200);
+  }
+  .windowLogs-table td:first-child {
+    border-left: 1px solid var(--gray-200);
+  }
+  .windowLogs-table td:last-child {
+    border-right: 1px solid var(--gray-200);
   }
 
   main {
