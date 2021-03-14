@@ -1,25 +1,74 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
+  import { formatLogMessage, parseFormatter } from './log-store'
   import type { FormattedMessage } from './types'
 
   export let logMessage: FormattedMessage
   export let logSize: number
+  export let formatter: string
 
   const dispatch = createEventDispatcher()
   const closeDialog = () => dispatch('close')
+  const updateFormatter = () => dispatch('updateFormatter', { newFormatter: formatter })
+  const formatObject = (obj: any) => {
+    if (typeof obj == 'string') {
+      return obj
+    } else {
+      return JSON.stringify(obj, null, 2)
+    }
+  }
+
   $: isFirst = logMessage.seq == 1
   $: isLast = logMessage.seq == logSize
+  $: formattedExample = (() => {
+    try {
+      const msg = {
+        seq: logMessage.seq,
+        data: logMessage.rawMessage,
+      }
+      return formatLogMessage(formatter)(msg)
+    } catch (err) {
+      return { formattedMessage: err.message }
+    }
+  })()
 </script>
 
 <main class="logMessageDetails">
   <div class="logMessageDetails-backdrop" on:click={closeDialog} />
-  <div class="logMessageDetails-actions">
-    <button on:click={closeDialog}>Close</button>
-    <button disabled={isFirst} on:click={() => dispatch('viewPrevious')}>Prev</button>
-    <button disabled={isLast} on:click={() => dispatch('viewNext')}>Next</button>
-  </div>
-  <div class="logMessageDetails-value">
-    {JSON.stringify(logMessage.rawMessage, null, 2)}
+  <div class="logMessageDetails-container">
+    <!-- show the log message details, allow navigating to adjacent logs -->
+    <div class="logMessageDetails-actions">
+      <button class="button button--primary logMessageDetails-closeButton" on:click={closeDialog}
+        >Close</button
+      >
+      <button
+        class="button logMessageDetails-prevButton"
+        disabled={isFirst}
+        on:click={() => dispatch('viewPrevious')}>Prev</button
+      >
+      <button
+        class="button logMessageDetails-nextButton"
+        disabled={isLast}
+        on:click={() => dispatch('viewNext')}>Next</button
+      >
+    </div>
+    <h3 class="subtitle">Details of log message #{logMessage.seq}</h3>
+    <div class="logMessageDetails-value code">
+      {formatObject(logMessage.rawMessage)}
+    </div>
+
+    <!-- allow the user to configure the formatter, taking the current log as example -->
+    <h3 class="subtitle">Configure the log format</h3>
+    <div class="formatterConfig">
+      <div class="formatterConfig-value">
+        <h4>Formatter</h4>
+        <textarea class="code" bind:value={formatter} />
+      </div>
+      <div class="formatterConfig-preview">
+        <h4>Example</h4>
+        <div class="code">{formatObject(formattedExample.formattedMessage)}</div>
+      </div>
+    </div>
   </div>
 </main>
 
@@ -40,19 +89,23 @@
   }
   .logMessageDetails-actions {
     position: relative;
-    margin-top: 20px;
-    margin-bottom: 10px;
+    margin-top: 10px;
+    display: flex;
+    justify-content: flex-end;
   }
-  .logMessageDetails-value {
-    white-space: pre;
-    font-family: monospace;
-    line-height: 1.2rem;
-    text-align: left;
-    background-color: white;
+  .logMessageDetails-actions > *:not(:last-child) {
+    margin-right: 10px;
+  }
+  .logMessageDetails-actions .logMessageDetails-closeButton {
+    margin-right: auto;
+  }
+  .logMessageDetails-container {
+    background-color: #f5f5f5;
     position: relative;
-    max-width: 900px;
+    max-width: 1200px;
     margin-left: auto;
     margin-right: auto;
+    margin-top: 20px;
     margin-bottom: 20px;
     padding: 20px 30px;
     border-radius: 10px;
@@ -60,7 +113,53 @@
     max-height: calc(100% - 40px);
     overflow: auto;
   }
-  .logMessageDetails-actions {
-    position: relative;
+  .code {
+    white-space: pre;
+    font-family: monospace;
+    color: #555;
+    background-color: white;
+    line-height: 1.2rem;
+    text-align: left;
+    overflow: auto;
+    border: 1px solid #dedede;
+    border-radius: 3px;
+    padding: 10px;
+    width: 100%;
+  }
+
+  .formatterConfig {
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+  }
+  .formatterConfig > * {
+    width: 50%;
+  }
+  .formatterConfig > *:not(:last-child) {
+    margin-right: 20px;
+  }
+  .formatterConfig-value textarea {
+    height: 300px;
+    margin: 0px;
+  }
+  .formatterConfig-preview .code {
+    height: 300px;
+  }
+  h3 {
+    text-align: left;
+    margin-top: 30px;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+    font-size: 17px;
+    letter-spacing: 1.3px;
+  }
+  h4 {
+    text-align: left;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 01px;
+    color: #666;
+    font-size: 12px;
+    margin-top: 0px;
   }
 </style>

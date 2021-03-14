@@ -65,3 +65,39 @@ button:not(:disabled):active {
 button:focus {
 	border-color: #666;
 }
+
+
+
+:root {
+	/* --primary-color: #de3b3c; */
+	--primary-color: #6FA157;
+	--gray-800: #3A435A;
+	--gray-600: #61697B;
+	--gray-400: #9CA1AC;
+	--gray-200: #EBECEF;
+}
+.button {
+	border-color: var(--primary-color);
+	color: var(--primary-color);
+	background-color: white;
+	border-radius: 3px;
+	text-transform: uppercase;
+	letter-spacing: 1px;
+	font-size: 14px;
+	font-weight: bold;
+	padding: 5px 13px;
+	margin: 0px;
+	cursor: pointer;
+}
+.button--primary {
+	color: white;
+	background-color: var(--primary-color);
+}
+.button--small {
+	font-size: 10px;
+	padding: 3px 8px;
+}
+
+h1, h2, h3, h4 {
+	color: var(--primary-color);
+}

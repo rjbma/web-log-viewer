@@ -63,7 +63,7 @@ function createLogStore(initialValue?: LogStore) {
   ws.onmessage = function (e) {
     const msg = decode(e.data) as ServerMessage
     update(currentValue => {
-      const columns = Object.keys(toFormatterObj(currentValue.formatter))
+      const columns = Object.keys(parseFormatter(currentValue.formatter))
       const logFormatter = formatLogMessage(currentValue.formatter)
       if (msg.type === 'init') {
         if (msg.mode === 'tail') {
@@ -146,7 +146,7 @@ function createLogStore(initialValue?: LogStore) {
 const encode = (data: any) => JSON.stringify(data)
 const decode = (data: string) => JSON.parse(data)
 const formatLogMessage = (formatterStr: string) => {
-  const formatter = toFormatterObj(formatterStr)
+  const formatter = parseFormatter(formatterStr)
   return (msg: LogMessage): FormattedMessage => ({
     seq: msg.seq,
     rawMessage: msg.data,
@@ -168,19 +168,20 @@ const execFn = (fn: LogColumnFormatter, msg: LogMessage) => {
   }
 }
 
-const toFormatterObj = memoizeOne(
+const parseFormatter = memoizeOne(
   (formatter: string): LogFormatter => {
     let result
     try {
       result = eval(formatter)
     } catch (err) {
-      console.error('Invalid formatter object. Reverting to default format')
-      console.log(err)
-      result = eval(DEFAULT_LOG_FORMATTER)
+      throw err
+      // console.error('Invalid formatter object. Reverting to default format')
+      // console.log(err)
+      // result = eval(DEFAULT_LOG_FORMATTER)
     }
     return result
   },
 )
 
 const logStore = createLogStore()
-export { logStore }
+export { logStore, formatLogMessage, parseFormatter }

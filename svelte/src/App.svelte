@@ -1,5 +1,4 @@
 <script lang="ts">
-  import FormatterConfig from './FormatterConfig.svelte'
   import { logStore } from './log-store'
   import LogMessageDetails from './LogMessageDetails.svelte'
   import type { FormattedMessage, LogMessage } from './types'
@@ -8,7 +7,6 @@
   const ROW_HEIGHT = 30
 
   let logMessageBeingViewed: FormattedMessage
-  let isConfiguringFormatter: boolean
 
   // scroll to bottom when new logs come in while on tail mode
   logStore.subscribe(logs => {
@@ -69,39 +67,34 @@
 </script>
 
 <main>
-  <!-- show a modal that allows the user to change the log formatter -->
-  {#if isConfiguringFormatter}
-    <FormatterConfig
-      formatter={$logStore.formatter}
-      on:close={e => {
-        if (e.detail?.newFormatter) {
-          logStore.changeFormatter(e.detail.newFormatter)
-        }
-        isConfiguringFormatter = false
-      }}
-    />
-  {/if}
-
   <!-- show a modal with details on the currently selected message -->
   {#if logMessageBeingViewed}
     <LogMessageDetails
       logMessage={logMessageBeingViewed}
       logSize={$logStore.count}
+      formatter={$logStore.formatter}
       on:close={() => (logMessageBeingViewed = undefined)}
       on:viewPrevious={() => viewRelativeLog(-1)}
       on:viewNext={() => viewRelativeLog(1)}
+      on:updateFormatter={e => {
+        if (e.detail?.newFormatter) {
+          logStore.changeFormatter(e.detail.newFormatter)
+        }
+      }}
     />
   {/if}
 
-  <p>
-    Visit the <a href="https://svelte.dev/tutorial">Svelte tutorial</a> to learn how to build Svelte
-    apps.
-  </p>
-  <h1>Log <small>{$logStore.count} items</small></h1>
+  <h1>
+    JSON log viewer
+    <small><strong>{$logStore.count}</strong> messages</small>
+    {#if $logStore.mode == 'tail'}
+      <small>in <strong>follow</strong> mode</small>
+    {/if}
+    {#if $logStore.mode == 'static'}
+      <small>frozen at offset <strong>{$logStore.offsetSeq}</strong></small>
+    {/if}
+  </h1>
 
-  <button type="button" on:click={() => (isConfiguringFormatter = true)}>Config</button>
-
-  <label><input type="checkbox" checked={$logStore.mode == 'tail'} disabled />Follow log?</label>
   <section id="windowLogs" class="windowLogs" on:scroll={onScroll}>
     <table class="windowLogs-table">
       <thead>
@@ -120,7 +113,10 @@
         {#each $logStore.window as msg (msg.seq)}
           <tr style="height: {ROW_HEIGHT}px">
             <td class="windowLogs-viewLogMessageButton"
-              ><button type="button" on:click={() => (logMessageBeingViewed = msg)}>View</button
+              ><button
+                class="button button--small"
+                type="button"
+                on:click={() => (logMessageBeingViewed = msg)}>View</button
               ></td
             >
             {#each $logStore.columns as col (col)}
@@ -151,9 +147,7 @@
     border-collapse: collapse;
     position: relative;
     width: 100%;
-  }
-  .windowLogs-table tbody tr {
-    height: 20px;
+    font-size: 14px;
   }
   .windowLogs-table td,
   .windowLogs-table th {
@@ -164,8 +158,8 @@
   .windowLogs-table th {
     position: sticky;
     top: 0px;
-    background-color: white;
-    padding: 20px 7px;
+    background-color: var(--gray-200);
+    padding: 10px 7px;
   }
   .windowLogs-table td {
     border-top: 1px dashed #dedede;
@@ -178,9 +172,24 @@
   }
 
   h1 {
-    color: #ff3e00;
+    text-align: left;
+    color: var(--primary-color);
     text-transform: uppercase;
-    font-size: 4em;
-    font-weight: 100;
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: 5px;
+    margin-top: 0px;
+  }
+  h1 small {
+    text-transform: lowercase;
+    font-size: 20px;
+    letter-spacing: normal;
+    font-weight: normal;
+    color: var(--gray-600);
+  }
+  h1 small:not(:last-child)::after {
+    content: '·';
+    margin-left: 10px;
+    margin-right: -5px;
   }
 </style>
