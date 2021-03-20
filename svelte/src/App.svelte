@@ -2,6 +2,7 @@
   import { logStore } from './log-store'
   import LogMessageDetails from './LogMessageDetails.svelte'
   import type { FormattedMessage, LogMessage } from './types'
+  import debounce from 'lodash/debounce'
 
   // height of each row, in pixels
   const ROW_HEIGHT = 30
@@ -45,16 +46,24 @@
 
   const calcSeqByOffset = (offset: number, logCount: number) => Math.floor(offset / ROW_HEIGHT)
 
-  function onScroll(ev: Event) {
-    const el = ev.target as Element
-    if (isScrolledToBottom(el)) {
-      if ($logStore.mode == 'static') {
-        logStore.changeToTail()
+  /**
+   * Calculate the seq the user has offset to, and requet data from the server around that offset.
+   */
+  const onScroll = debounce(
+    (ev: Event) => {
+      const el = ev.target as Element
+      if (isScrolledToBottom(el)) {
+        if ($logStore.mode == 'static') {
+          logStore.changeToTail()
+        }
+      } else {
+        const seq = calcSeqByOffset(el.scrollTop, $logStore.count) + 1
+        logStore.changeToStatic(seq)
       }
-    } else {
-      logStore.changeToStatic(calcSeqByOffset(el.scrollTop, $logStore.count))
-    }
-  }
+    },
+    100,
+    { leading: false, trailing: true },
+  )
 
   function viewRelativeLog(delta: 1 | -1) {
     const currentIndex = $logStore.window.findIndex(l => l === logMessageBeingViewed)
@@ -77,7 +86,10 @@
       on:viewNext={() => viewRelativeLog(1)}
       on:closeAndUpdateFormatter={e => {
         if (e.detail?.newFormatter) {
-          logStore.changeFormatter(e.detail.newFormatter)
+          // check if formatter has actually changed
+          if ($logStore.formatter != e.detail.newFormatter) {
+            logStore.changeFormatter(e.detail.newFormatter)
+          }
         }
         logMessageBeingViewed = undefined
       }}

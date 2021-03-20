@@ -82,7 +82,7 @@ function createLogStore(initialValue?: LogStore) {
             formatter: currentValue.formatter,
             columns,
             window: msg.window.map(logFormatter),
-            offsetSeq: msg.window.length ? msg.window[0].seq : 0,
+            offsetSeq: msg.offsetSeq,
             latest: [],
           }
         }
@@ -130,12 +130,16 @@ function createLogStore(initialValue?: LogStore) {
     changeFormatter: (newFormatter: string) => {
       update(state => {
         // re-fetch data from the server so it can be formatted with the new formatter
-        ws.send(encode({ mode: state.mode }))
+        ws.send(
+          encode({
+            mode: state.mode,
+            offsetSeq: state.mode == 'static' ? state.offsetSeq : undefined,
+          }),
+        )
 
         // save the new formatter
         return {
           ...state,
-          window: [],
           formatter: newFormatter,
         }
       })

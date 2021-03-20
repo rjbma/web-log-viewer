@@ -23,6 +23,7 @@ type InitMessage = {
   type: 'init'
   mode: OperationMode
   size: number
+  offsetSeq: number
   window: LogMessage[]
 }
 // the message sent to all clients once a new message comes in from stdin
