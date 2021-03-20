@@ -5,8 +5,8 @@ import http from 'http'
 import { pipe } from 'ramda'
 import WebSocket from 'ws'
 import { createReadlineStream } from './stream-utils'
-import json5 from 'json5'
 import { LogMessage, ServerMessage } from './types'
+import { parseRawMessage } from './config'
 
 const LOG_WINDOW_SIZE = 100
 
@@ -26,11 +26,12 @@ type ClientMessage = StaticClientMessage | TailClientMessage
 type StaticClientMessage = { mode: 'static'; offsetSeq: number }
 type TailClientMessage = { mode: 'tail' }
 
-/**Contains all the logs that came into the server up untill now */
+/**Contains all the logs that came into the server up until now */
 const logs: LogMessage[] = []
 
 // setup the server
 const app = express()
+app.use(express.static('public'))
 const server = http.createServer(app)
 const wss = new WebSocket.Server({ server })
 
@@ -59,9 +60,6 @@ server.listen(port, () => {
 const setupLogStream = () =>
   pipe(
     () => createReadlineStream(),
-    // map(transformLogLine(config)),
-    // tap((l) => console.log("received from stdin", l)),
-    // map(parseRawMessage),
     map(rawMessage => {
       const msg: LogMessage = {
         seq: logs.length + 1,
@@ -81,25 +79,6 @@ const setupLogStream = () =>
       })
     }),
   )
-
-const parseRawMessage = (rl: RawMessage) => {
-  try {
-    const msg = json5.parse(rl)
-    if (msg.message?.request?.headers) {
-      msg.message.request.headers = json5.parse(msg.message.request.headers)
-    }
-    if (msg.message?.response?.headers) {
-      msg.message.response.headers = json5.parse(msg.message.response.headers)
-    }
-    if (msg.message?.response?.body) {
-      msg.message.response.body = json5.parse(msg.message.response.body)
-    }
-    return msg
-  } catch (err) {
-    const msg = { message: rl }
-    return msg
-  }
-}
 
 /**
  * Function executed every time a new WS client connects to the server.

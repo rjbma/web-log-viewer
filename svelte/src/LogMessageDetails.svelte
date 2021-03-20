@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
   import { formatLogMessage, parseFormatter } from './log-store'
+  import json5 from 'json5'
   import type { FormattedMessage } from './types'
 
   export let logMessage: FormattedMessage
@@ -13,7 +14,7 @@
     if (typeof obj == 'string') {
       return obj
     } else {
-      return JSON.stringify(obj, null, 2)
+      return json5.stringify(obj, null, 2)
     }
   }
 
