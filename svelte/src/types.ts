@@ -1,7 +1,11 @@
 type OperationMode = 'static' | 'tail'
 
 /**A log message has sent by the server to the clients */
-type LogMessage = { seq: number; data: Record<string, any> }
+type LogMessage = {
+  seq: number
+  data: Record<string, any>
+  index: string[]
+}
 
 /**A log message that's already been formatted and ready to be displayed */
 type FormattedMessage = {

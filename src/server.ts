@@ -6,7 +6,7 @@ import { pipe } from 'ramda'
 import WebSocket from 'ws'
 import { createReadlineStream } from './stream-utils'
 import { LogMessage, ServerMessage } from './types'
-import { parseRawMessage } from './config'
+import { extractIndexTokens, parseRawMessage } from './config'
 
 const LOG_WINDOW_SIZE = 100
 
@@ -61,10 +61,13 @@ const setupLogStream = () =>
   pipe(
     () => createReadlineStream(),
     map(rawMessage => {
+      const data = parseRawMessage(rawMessage)
       const msg: LogMessage = {
         seq: logs.length + 1,
-        data: parseRawMessage(rawMessage),
+        data,
+        index: extractIndexTokens(data),
       }
+      console.log(msg)
       logs.push(msg)
       return msg
     }),
