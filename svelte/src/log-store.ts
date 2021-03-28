@@ -188,7 +188,8 @@ const formatLogMessage = (formatterStr: string) => {
 
 const execFn = (fn: LogColumnFormatter, msg: LogMessage) => {
   try {
-    return fn(msg.data, msg.seq)
+    const res = fn(msg.data, msg.seq)
+    return res == undefined ? '' : res
   } catch (err) {
     return ''
   }

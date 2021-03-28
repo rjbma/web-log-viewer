@@ -157,7 +157,7 @@
                 ></td
               >
               {#each $logStore.columns as col (col)}
-                <td>{msg.formattedMessage[col]}</td>
+                <td>{msg.formattedMessage[col] || ''}</td>
               {/each}
             </tr>
           {/each}

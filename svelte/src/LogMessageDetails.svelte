@@ -25,6 +25,7 @@
       const msg = {
         seq: logMessage.seq,
         data: logMessage.rawMessage,
+        index: [],
       }
       return formatLogMessage(formatter)(msg)
     } catch (err) {
