@@ -5,8 +5,9 @@ import http from 'http'
 import { pipe } from 'ramda'
 import WebSocket from 'ws'
 import { createReadlineStream } from './stream-utils'
-import { LogMessage, ServerMessage } from './types'
+import { ClientMessage, LogMessage, ServerMessage } from './types'
 import { extractIndexTokens, parseRawMessage } from './config'
+import { isIndexMatch } from './log-index'
 
 const LOG_WINDOW_SIZE = 100
 
@@ -18,13 +19,6 @@ type ClientStatus =
       start: number
     }
 const clients: ClientStatus[] = []
-
-type RawMessage = string
-
-// signal when a client wants to switch modes
-type ClientMessage = StaticClientMessage | TailClientMessage
-type StaticClientMessage = { mode: 'static'; offsetSeq: number }
-type TailClientMessage = { mode: 'tail' }
 
 /**Contains all the logs that came into the server up until now */
 const logs: LogMessage[] = []
@@ -92,20 +86,22 @@ function setupNewClient(ws: WebSocket) {
   clients.push({ mode: 'tail' })
 
   // send a window with the last logs to newly registered clients
-  ws.send(encode(buildInitMessage()))
+  ws.send(encode(buildTailMessage('')))
 
   ws.on('message', encodedMsg => {
     const msg = decode(encodedMsg) as ClientMessage
     if (msg.mode == 'tail') {
-      ws.send(encode(buildInitMessage()))
+      ws.send(encode(buildTailMessage(msg.filter)))
     } else if (msg.mode == 'static') {
+      const matcher = isIndexMatch(msg.filter)
+      const filteredLogs = logs.filter(l => matcher(l.index))
       ws.send(
         encode({
           type: 'init',
           mode: 'static',
-          size: logs.length,
+          size: filteredLogs.length,
           offsetSeq: msg.offsetSeq,
-          window: logs.slice(
+          window: filteredLogs.slice(
             Math.max(msg.offsetSeq - LOG_WINDOW_SIZE / 2, 0),
             msg.offsetSeq + LOG_WINDOW_SIZE / 2,
           ),
@@ -114,13 +110,16 @@ function setupNewClient(ws: WebSocket) {
     }
   })
 
-  function buildInitMessage(): ServerMessage {
+  function buildTailMessage(filter: string): ServerMessage {
+    filter = '231ac91c-cef8-4c3d-9b26-0d1695dd9ef8 request'
+    const matcher = isIndexMatch(filter)
+    const filteredLogs = logs.filter(l => matcher(l.index))
     return {
       type: 'init',
       mode: 'tail',
-      size: logs.length,
+      size: filteredLogs.length,
       offsetSeq: -1,
-      window: logs.slice(-LOG_WINDOW_SIZE),
+      window: filteredLogs.slice(-LOG_WINDOW_SIZE),
     }
   }
 }

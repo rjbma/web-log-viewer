@@ -1,8 +1,10 @@
+type Tokens = string[]
+
 interface Config {
   includeObjectKeys: boolean
 }
 
-const extractIndexTokens = (cfg: Config) => (obj: Object, tokens: string[] = []): string[] => {
+const extractIndexTokens = (cfg: Config) => (obj: Object, tokens: Tokens = []): Tokens => {
   let newTokens = [...tokens]
   if (cfg.includeObjectKeys) {
     newTokens = [...newTokens, ...Object.keys(obj)]
@@ -29,4 +31,14 @@ const removeDiacritics = (str: string) => {
   })
 }
 
-export { extractIndexTokens }
+const isIndexMatch = (filter: string) => {
+  if (!filter) {
+    return () => true
+  }
+  const tokens = removeDiacritics(filter).split(/\s+/)
+  return (index: Tokens) => tokens.every(token => index.find(isSingleMatch(token)))
+}
+
+const isSingleMatch = (tokenToSearch: string) => (data: string) => data.indexOf(tokenToSearch) != -1
+
+export { extractIndexTokens, isIndexMatch }

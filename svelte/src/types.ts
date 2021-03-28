@@ -36,8 +36,8 @@ type UpdateMessage = { type: 'update'; size: number; message: LogMessage }
 type ServerMessage = InitMessage | UpdateMessage
 
 // CLIENT MESSAGES
-type StaticClientMessage = { mode: 'static'; offsetSeq: number }
-type TailClientMessage = { mode: 'tail' }
+type StaticClientMessage = { mode: 'static'; filter: string; offsetSeq: number }
+type TailClientMessage = { mode: 'tail'; filter: string }
 /**Messages sent from the client to the server, basically to signal it want to swith operation mode */
 type ClientMessage = StaticClientMessage | TailClientMessage
 
