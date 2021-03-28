@@ -124,7 +124,6 @@
     <input type="text" on:keyup={onChangeFilter} />
   </section>
 
-  <div class="message message--info">No messages found</div>
   <section id="windowLogs" class="windowLogs" on:scroll={onScroll}>
     {#if $logStore.window.length == 0}
       <div class="message message--info">No messages found</div>
@@ -179,7 +178,7 @@
   }
 
   .windowLogs-table {
-    table-layout: fixed;
+    table-layout: auto;
     white-space: nowrap;
     text-align: left;
     border-collapse: separate;
