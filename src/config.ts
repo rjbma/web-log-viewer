@@ -1,7 +1,7 @@
 import { Command } from 'commander'
 import { extractIndexTokens as extractIndexTokensFn } from './log-index'
 
-const program = new Command('json-log-viewer')
+const program = new Command('web-log-viewer')
 program.version('0.0.1')
 program.option('--port <port>', 'specify the port where the server will run', '8000')
 program.option(

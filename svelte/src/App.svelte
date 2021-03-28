@@ -110,7 +110,7 @@
   {/if}
 
   <h1>
-    JSON log viewer
+    Web log viewer
     <small><strong>{$logStore.count}</strong> messages</small>
     {#if $logStore.mode == 'tail'}
       <small>in <strong>follow</strong> mode</small>
