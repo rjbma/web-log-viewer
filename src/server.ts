@@ -6,7 +6,7 @@ import { pipe } from 'ramda'
 import WebSocket from 'ws'
 import { createReadlineStream } from './stream-utils'
 import { ClientMessage, LogMessage, ServerMessage } from './types'
-import { extractIndexTokens, parseRawMessage } from './config'
+import { config } from './config'
 import { isIndexMatch } from './log-index'
 
 const LOG_WINDOW_SIZE = 100
@@ -30,12 +30,13 @@ const server = http.createServer(app)
 const wss = new WebSocket.Server({ server })
 
 //start our server
-const port = process.env.PORT || 3000
-server.listen(port, () => {
+server.listen(config.port, () => {
   const address = server.address()
   if (address) {
     console.log(
-      `Server started on port ${typeof address == 'string' ? address : `${address.port}`})`,
+      `Started on ${
+        typeof address == 'string' ? address : `${address.port}`
+      }. Waiting for log messages on stdin...`,
     )
 
     // setup the log stream from stdin to clients
@@ -54,14 +55,18 @@ server.listen(port, () => {
 const setupLogStream = () =>
   pipe(
     () => createReadlineStream(),
+    tap(rawMessage => {
+      if (config.stdout) {
+        console.log(rawMessage)
+      }
+    }),
     map(rawMessage => {
-      const data = parseRawMessage(rawMessage)
+      const data = config.parseRawMessage(rawMessage)
       const msg: LogMessage = {
         seq: logs.length + 1,
         data,
-        index: extractIndexTokens(data),
+        index: config.extractIndexTokens(data),
       }
-      console.log(msg)
       logs.push(msg)
       return msg
     }),
@@ -93,33 +98,34 @@ function setupNewClient(ws: WebSocket) {
     if (msg.mode == 'tail') {
       ws.send(encode(buildTailMessage(msg.filter)))
     } else if (msg.mode == 'static') {
-      const matcher = isIndexMatch(msg.filter)
-      const filteredLogs = logs.filter(l => matcher(l.index))
-      ws.send(
-        encode({
-          type: 'init',
-          mode: 'static',
-          size: filteredLogs.length,
-          offsetSeq: msg.offsetSeq,
-          window: filteredLogs.slice(
-            Math.max(msg.offsetSeq - LOG_WINDOW_SIZE / 2, 0),
-            msg.offsetSeq + LOG_WINDOW_SIZE / 2,
-          ),
-        }),
-      )
+      ws.send(encode(buildStaticMessage(msg.filter, msg.offsetSeq)))
     }
   })
 
   function buildTailMessage(filter: string): ServerMessage {
-    filter = '231ac91c-cef8-4c3d-9b26-0d1695dd9ef8 request'
     const matcher = isIndexMatch(filter)
-    const filteredLogs = logs.filter(l => matcher(l.index))
+    const filteredLogs = logs.filter(l => matcher(l.index)).map((l, i) => ({ ...l, seq: i + 1 }))
     return {
       type: 'init',
       mode: 'tail',
       size: filteredLogs.length,
       offsetSeq: -1,
       window: filteredLogs.slice(-LOG_WINDOW_SIZE),
+    }
+  }
+
+  function buildStaticMessage(filter: string, offsetSeq: number): ServerMessage {
+    const matcher = isIndexMatch(filter)
+    const filteredLogs = logs.filter(l => matcher(l.index)).map((l, i) => ({ ...l, seq: i + 1 }))
+    return {
+      type: 'init',
+      mode: 'static',
+      size: filteredLogs.length,
+      offsetSeq,
+      window: filteredLogs.slice(
+        Math.max(offsetSeq - LOG_WINDOW_SIZE / 2, 0),
+        offsetSeq + LOG_WINDOW_SIZE / 2,
+      ),
     }
   }
 }

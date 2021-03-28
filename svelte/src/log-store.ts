@@ -1,6 +1,7 @@
 import memoizeOne from 'memoize-one'
 import { writable } from 'svelte/store'
 import type {
+  ClientMessage,
   FormattedMessage,
   LogColumnFormatter,
   LogFormatter,
@@ -11,6 +12,7 @@ import type {
 interface TailLogStore {
   mode: 'tail'
   count: number
+  filter: string
   formatter: string
   columns: string[]
   window: FormattedMessage[]
@@ -20,6 +22,7 @@ interface StaticLogStore {
   mode: 'static'
   offsetSeq: number
   count: number
+  filter: string
   formatter: string
   columns: string[]
   window: FormattedMessage[]
@@ -38,8 +41,6 @@ const DEFAULT_LOG_FORMATTER = `
     level: l => l.level,
     timestamp: l => l.timestamp.substring(0, 19).replace('T', ' '),
     message: l => l.message,
-    bank: l => l.additionalInfo.bankName,
-    url: l => l.additionalInfo.url,
   })`
 
 function createLogStore(initialValue?: LogStore) {
@@ -48,6 +49,7 @@ function createLogStore(initialValue?: LogStore) {
     initialValue = {
       mode: 'tail',
       count: 0,
+      filter: '',
       formatter: DEFAULT_LOG_FORMATTER,
       columns: [],
       window: [],
@@ -56,7 +58,10 @@ function createLogStore(initialValue?: LogStore) {
   }
   const { subscribe, update } = writable<LogStore>(initialValue)
 
-  const ws = new WebSocket('ws://localhost:3000/')
+  const ws = new WebSocket(`ws://${window.location.host}/`)
+
+  // const ws = new WebSocket('ws://localhost:3000/')
+  // const ws = new WebSocket('/')
   ws.onopen = function () {
     console.log('WebSocket Client Connected')
   }
@@ -70,6 +75,7 @@ function createLogStore(initialValue?: LogStore) {
           return {
             mode: msg.mode,
             count: msg.size,
+            filter: currentValue.filter,
             formatter: currentValue.formatter,
             columns,
             window: msg.window.map(logFormatter),
@@ -79,6 +85,7 @@ function createLogStore(initialValue?: LogStore) {
           return {
             mode: msg.mode,
             count: msg.size,
+            filter: currentValue.filter,
             formatter: currentValue.formatter,
             columns,
             window: msg.window.map(logFormatter),
@@ -107,35 +114,51 @@ function createLogStore(initialValue?: LogStore) {
     })
   }
 
+  const sendToServer = (msg: ClientMessage) => ws.send(encode(msg))
+
   return {
     subscribe,
+    changeFilter: (newFilter: string) => {
+      update(state => {
+        if (state.mode == 'tail') {
+          sendToServer({ mode: state.mode, filter: newFilter })
+        } else if (state.mode == 'static') {
+          sendToServer({ mode: state.mode, offsetSeq: state.offsetSeq, filter: newFilter })
+        }
+        return {
+          ...state,
+          filter: newFilter,
+        }
+      })
+    },
     changeToTail: () => {
-      update(state => ({
-        ...state,
-        mode: 'tail',
-        offsetSeq: undefined,
-      }))
-
-      ws.send(encode({ mode: 'tail' }))
+      update(state => {
+        sendToServer({ mode: 'tail', filter: state.filter })
+        return {
+          ...state,
+          mode: 'tail',
+          offsetSeq: undefined,
+        }
+      })
     },
     changeToStatic: (offsetSeq: number) => {
-      update(state => ({
-        ...state,
-        mode: 'static',
-        offsetSeq,
-      }))
-
-      ws.send(encode({ mode: 'static', offsetSeq }))
+      update(state => {
+        sendToServer({ mode: 'static', offsetSeq, filter: state.filter })
+        return {
+          ...state,
+          mode: 'static',
+          offsetSeq,
+        }
+      })
     },
     changeFormatter: (newFormatter: string) => {
       update(state => {
         // re-fetch data from the server so it can be formatted with the new formatter
-        ws.send(
-          encode({
-            mode: state.mode,
-            offsetSeq: state.mode == 'static' ? state.offsetSeq : undefined,
-          }),
-        )
+        sendToServer({
+          mode: state.mode,
+          offsetSeq: state.mode == 'static' ? state.offsetSeq : undefined,
+          filter: state.filter,
+        })
 
         // save the new formatter
         return {

@@ -65,6 +65,19 @@
     { leading: false, trailing: true },
   )
 
+  /**
+   * Called when the user enters a new filter query. This will eventually
+   * fetch filtered data from the server
+   */
+  const onChangeFilter = debounce(
+    (ev: Event) => {
+      const input = ev.target as HTMLInputElement
+      logStore.changeFilter(input.value)
+    },
+    100,
+    { leading: false, trailing: true },
+  )
+
   function viewRelativeLog(delta: 1 | -1) {
     const currentIndex = $logStore.window.findIndex(l => l === logMessageBeingViewed)
     if (currentIndex == -1) {
@@ -107,6 +120,10 @@
     {/if}
   </h1>
 
+  <section class="logFilters">
+    <input type="text" on:keyup={onChangeFilter} />
+  </section>
+
   <section id="windowLogs" class="windowLogs" on:scroll={onScroll}>
     <table class="windowLogs-table">
       <thead>
@@ -137,7 +154,7 @@
           </tr>
         {/each}
         <tr
-          class="windowLogs-beforeWindowRow"
+          class="windowLogs-afterWindowRow"
           style="height: {calcAfterWindowRowHeight($logStore.window, $logStore.count)}px"
         />
       </tbody>
