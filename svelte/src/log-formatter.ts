@@ -3,9 +3,7 @@ const FORMATTER = 'jsl.formatter'
 const DEFAULT_LOG_FORMATTER = `
   ({
     '#': (l, seq) => seq,
-    level: l => l.level,
-    timestamp: l => l.timestamp.substring(0, 19).replace('T', ' '),
-    message: l => l.message,
+    message: l => JSON.stringify(l),
   })`
 
 const formatter = {
