@@ -41,6 +41,7 @@ export default {
 	},
 	plugins: [
 		replace({
+			preventAssignment: true,
 			'JSL_ENVIRONMENT': JSON.stringify(process.env.NODE_ENV),
 		}),
 		svelte({

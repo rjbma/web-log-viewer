@@ -1,5 +1,6 @@
 import memoizeOne from 'memoize-one'
 import { writable } from 'svelte/store'
+import { formatter } from './log-formatter'
 import type {
   ClientMessage,
   FormattedMessage,
@@ -35,13 +36,6 @@ type LogStore = TailLogStore | StaticLogStore
 
 const LOG_WINDOW_SIZE = 100
 const LATEST_LOG_WINDOW_SIZE = 2
-const DEFAULT_LOG_FORMATTER = `
-  ({
-    '#': (l, seq) => seq,
-    level: l => l.level,
-    timestamp: l => l.timestamp.substring(0, 19).replace('T', ' '),
-    message: l => l.message,
-  })`
 
 function createLogStore(initialValue?: LogStore) {
   // use default values, if needed
@@ -50,7 +44,7 @@ function createLogStore(initialValue?: LogStore) {
       mode: 'tail',
       count: 0,
       filter: '',
-      formatter: DEFAULT_LOG_FORMATTER,
+      formatter: formatter.getFormatter(),
       columns: [],
       window: [],
       latest: [],
@@ -160,6 +154,7 @@ function createLogStore(initialValue?: LogStore) {
         })
 
         // save the new formatter
+        formatter.updateFormatter(newFormatter)
         return {
           ...state,
           formatter: newFormatter,
