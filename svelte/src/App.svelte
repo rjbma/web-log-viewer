@@ -124,41 +124,46 @@
     <input type="text" on:keyup={onChangeFilter} />
   </section>
 
+  <div class="message message--info">No messages found</div>
   <section id="windowLogs" class="windowLogs" on:scroll={onScroll}>
-    <table class="windowLogs-table">
-      <thead>
-        <tr style="height: {ROW_HEIGHT}px">
-          <th />
-          {#each $logStore.columns as col}
-            <th>{col}</th>
-          {/each}
-        </tr>
-      </thead>
-      <tbody>
-        <tr
-          class="windowLogs-beforeWindowRow"
-          style="height: {calcBeforeWindowRowHeigh($logStore.window)}px"
-        />
-        {#each $logStore.window as msg (msg.seq)}
+    {#if $logStore.window.length == 0}
+      <div class="message message--info">No messages found</div>
+    {:else}
+      <table class="windowLogs-table">
+        <thead>
           <tr style="height: {ROW_HEIGHT}px">
-            <td class="windowLogs-viewLogMessageButton"
-              ><button
-                class="button button--small"
-                type="button"
-                on:click={() => (logMessageBeingViewed = msg)}>View</button
-              ></td
-            >
-            {#each $logStore.columns as col (col)}
-              <td>{msg.formattedMessage[col]}</td>
+            <th />
+            {#each $logStore.columns as col}
+              <th>{col}</th>
             {/each}
           </tr>
-        {/each}
-        <tr
-          class="windowLogs-afterWindowRow"
-          style="height: {calcAfterWindowRowHeight($logStore.window, $logStore.count)}px"
-        />
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          <tr
+            class="windowLogs-beforeWindowRow"
+            style="height: {calcBeforeWindowRowHeigh($logStore.window)}px"
+          />
+          {#each $logStore.window as msg (msg.seq)}
+            <tr style="height: {ROW_HEIGHT}px">
+              <td class="windowLogs-viewLogMessageButton"
+                ><button
+                  class="button button--small"
+                  type="button"
+                  on:click={() => (logMessageBeingViewed = msg)}>View</button
+                ></td
+              >
+              {#each $logStore.columns as col (col)}
+                <td>{msg.formattedMessage[col]}</td>
+              {/each}
+            </tr>
+          {/each}
+          <tr
+            class="windowLogs-afterWindowRow"
+            style="height: {calcAfterWindowRowHeight($logStore.window, $logStore.count)}px"
+          />
+        </tbody>
+      </table>
+    {/if}
   </section>
 </main>
 
@@ -171,7 +176,6 @@
   .windowLogs {
     height: 100%;
     overflow: auto;
-    margin: auto;
   }
 
   .windowLogs-table {
@@ -249,5 +253,20 @@
     content: '·';
     margin-left: 10px;
     margin-right: -5px;
+  }
+
+  .message {
+    border: 1px solid;
+    border-radius: 5px;
+    padding: 20px;
+    margin: 20px 0px;
+    border-color: var(--gray-600);
+    color: var(--gray-600);
+    background-color: var(--gray-100);
+  }
+  .message--info {
+    border-color: #0c5460;
+    color: #0c5460;
+    background-color: #0c546022;
   }
 </style>

@@ -58,10 +58,9 @@ function createLogStore(initialValue?: LogStore) {
   }
   const { subscribe, update } = writable<LogStore>(initialValue)
 
-  const ws = new WebSocket(`ws://${window.location.host}/`)
-
-  // const ws = new WebSocket('ws://localhost:3000/')
-  // const ws = new WebSocket('/')
+  // @ts-ignore JSL_ENVIRONMENT is being replaced by @rollup/plugin-replace
+  const serverAddress = JSL_ENVIRONMENT == 'production' ? window.location.host : 'localhost:8000'
+  const ws = new WebSocket(`ws://${serverAddress}/`)
   ws.onopen = function () {
     console.log('WebSocket Client Connected')
   }
