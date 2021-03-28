@@ -121,7 +121,12 @@
   </h1>
 
   <section class="logFilters">
-    <input type="text" on:keyup={onChangeFilter} />
+    <input
+      class="windowLogs-filterInput"
+      type="text"
+      placeholder="enter text to filter messages"
+      on:keyup={onChangeFilter}
+    />
   </section>
 
   <section id="windowLogs" class="windowLogs" on:scroll={onScroll}>
@@ -177,6 +182,15 @@
     overflow: auto;
   }
 
+  .windowLogs-filterInput {
+    border-radius: 5px;
+    font-size: 20px;
+    padding: 20px;
+    width: 100%;
+    max-width: 900px;
+    margin: 0px 0px 25px 0px;
+  }
+
   .windowLogs-table {
     table-layout: auto;
     white-space: nowrap;
@@ -227,7 +241,6 @@
   }
 
   main {
-    text-align: center;
     padding: 1em 1em;
     margin: 0 auto;
   }
@@ -264,6 +277,7 @@
     background-color: var(--gray-100);
   }
   .message--info {
+    text-align: center;
     border-color: #0c5460;
     color: #0c5460;
     background-color: #0c546022;
