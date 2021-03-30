@@ -23,13 +23,14 @@ var ws_1 = __importDefault(require("ws"));
 var stream_utils_1 = require("./stream-utils");
 var config_1 = require("./config");
 var log_index_1 = require("./log-index");
+var path_1 = __importDefault(require("path"));
 var LOG_WINDOW_SIZE = 100;
 var clients = [];
 /**Contains all the logs that came into the server up until now */
 var logs = [];
 // setup the server
 var app = express_1.default();
-app.use(express_1.default.static('public'));
+app.use(express_1.default.static(path_1.default.join(__dirname, 'public')));
 var server = http_1.default.createServer(app);
 var wss = new ws_1.default.Server({ server: server });
 //start our server

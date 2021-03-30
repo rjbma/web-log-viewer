@@ -8,6 +8,7 @@ import { createReadlineStream } from './stream-utils'
 import { ClientMessage, LogMessage, ServerMessage } from './types'
 import { config } from './config'
 import { isIndexMatch } from './log-index'
+import path from 'path'
 
 const LOG_WINDOW_SIZE = 100
 
@@ -25,7 +26,7 @@ const logs: LogMessage[] = []
 
 // setup the server
 const app = express()
-app.use(express.static('public'))
+app.use(express.static(path.join(__dirname, 'public')))
 const server = http.createServer(app)
 const wss = new WebSocket.Server({ server })
 
