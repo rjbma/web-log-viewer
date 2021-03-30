@@ -1,6 +1,6 @@
 {
   "name": "web-log-viewer",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -14,6 +14,10 @@
     "echo": "echo \"{ '(date -Ins)' timestamp: '2021-02-13T17:48:32.841Z',  level: 'INFO',  message: 'Finished job execution5'}\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "bin": {
+    "web-log-viewer": "./bin/global.js"
+  },
+  "preferGlobal": true,
   "keywords": ["json-log-viewer", "json", "web-log-viewer", "logs", "log4j", "winston"],
   "author": "rjbma",
   "license": "ISC",
