@@ -125,6 +125,7 @@
       class="windowLogs-filterInput"
       type="text"
       placeholder="enter text to filter messages"
+      tabindex={logMessageBeingViewed ? -1 : 0}
       on:keyup={onChangeFilter}
     />
   </section>
@@ -151,6 +152,7 @@
             <tr style="height: {ROW_HEIGHT}px">
               <td class="windowLogs-viewLogMessageButton"
                 ><button
+                  tabindex={logMessageBeingViewed ? -1 : 0}
                   class="button button--small"
                   type="button"
                   on:click={() => (logMessageBeingViewed = msg)}>View</button
