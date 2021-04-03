@@ -1,8 +1,11 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte'
-  import { formatLogMessage, parseFormatter } from './log-store'
+  import { createEventDispatcher, onMount } from 'svelte'
+  import { formatLogMessage, logStore, parseFormatter } from './log-store'
   import json5 from 'json5'
   import type { FormattedMessage } from './types'
+  import ace from 'brace'
+  import 'brace/mode/javascript'
+  import 'brace/keybinding/vim'
 
   export let logMessage: FormattedMessage
   export let logSize: number
@@ -17,9 +20,14 @@
       return json5.stringify(obj, null, 2)
     }
   }
+  const resetFormatter = () => {
+    logStore.resetFormatter()
+  }
 
+  // keep track of whether the first/last message is being displayed
   $: isFirst = logMessage.seq == 1
   $: isLast = logMessage.seq == logSize
+  // keep the format example updated
   $: formattedExample = (() => {
     try {
       const msg = {
@@ -32,6 +40,26 @@
       return { formattedMessage: err.message }
     }
   })()
+  // whenever the formatter changes, update the ace editor
+  $: {
+    if (editor && formatter !== editor.getValue()) {
+      editor.setValue(formatter, 1)
+    }
+  }
+
+  let keybinding: 'vim' | 'normal' = 'vim'
+  let editor: ace.Editor
+  onMount(() => {
+    editor = ace.edit('editor')
+    editor.getSession().setMode('ace/mode/javascript')
+    editor.setValue(formatter, 1)
+    editor.addEventListener('change', (e, editor) => {
+      formatter = editor.getValue()
+    })
+  })
+  $: {
+    editor && editor.setKeyboardHandler(keybinding == 'vim' ? 'ace/keyboard/vim' : '')
+  }
 </script>
 
 <main class="logMessageDetails">
@@ -62,8 +90,19 @@
     <h3 class="subtitle">Configure the log format</h3>
     <div class="formatterConfig">
       <div class="formatterConfig-value">
-        <h4>Formatter</h4>
-        <textarea class="code" bind:value={formatter} />
+        <h4>
+          Formatter
+          <button class="button button--small" on:click={resetFormatter}>reset</button>
+          <div class="formatterConfig-keybindingSelector">
+            <button on:click={() => (keybinding = 'vim')} class:selected={keybinding == 'vim'}
+              >vim</button
+            >
+            <button on:click={() => (keybinding = 'normal')} class:selected={keybinding == 'normal'}
+              >normal</button
+            >
+          </div>
+        </h4>
+        <div id="editor" class="code" />
       </div>
       <div class="formatterConfig-preview">
         <h4>Example</h4>
@@ -139,9 +178,36 @@
   .formatterConfig > *:not(:last-child) {
     margin-right: 20px;
   }
-  .formatterConfig-value textarea {
+  .formatterConfig-value h4 {
+    display: flex;
+    align-items: center;
+  }
+  .formatterConfig-value .button {
+    margin-left: 4px;
+  }
+  .formatterConfig-keybindingSelector {
+    margin-left: auto;
+  }
+  .formatterConfig-keybindingSelector button {
+    padding: 0px;
+    margin: 0px;
+    border: none;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 1px;
+    cursor: pointer;
+  }
+  .formatterConfig-keybindingSelector button:not(:last-child)::after {
+    content: '|';
+    margin-left: 5px;
+  }
+  .formatterConfig-keybindingSelector .selected {
+    font-weight: bold;
+  }
+  .formatterConfig-value .code {
     height: 300px;
     margin: 0px;
+    overflow: hidden;
   }
   .formatterConfig-preview .code {
     height: 300px;

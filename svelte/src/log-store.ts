@@ -161,6 +161,12 @@ function createLogStore(initialValue?: LogStore) {
         }
       })
     },
+    resetFormatter: () => {
+      update(state => ({
+        ...state,
+        formatter: formatter.resetFormatter(),
+      }))
+    },
   }
 }
 
