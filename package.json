@@ -1,8 +1,9 @@
 {
   "name": "web-log-viewer",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "",
   "main": "index.js",
+  "files": ["build/"],
   "scripts": {
     "tail": "tail -n 100000 -f nginx.log | node --inspect=0 --enable-source-maps build/server.js -k",
     "cat": "cat log.log | node --inspect=0 --enable-source-maps build/server.js",
@@ -12,6 +13,7 @@
     "public:dev": "cd svelte && npm run dev",
     "public:build": "cd svelte && NODE_ENV=production npm run build",
     "echo": "echo \"{ '(date -Ins)' timestamp: '2021-02-13T17:48:32.841Z',  level: 'INFO',  message: 'Finished job execution5'}\"",
+    "prepublishOnly": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "bin": {
