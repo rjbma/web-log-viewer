@@ -3,9 +3,10 @@
   import LogMessageDetails from './LogMessageDetails.svelte'
   import type { FormattedMessage, LogMessage } from './types'
   import debounce from 'lodash/debounce'
+  import { unescape } from './utils'
 
   // height of each row, in pixels
-  const ROW_HEIGHT = 30
+  const ROW_HEIGHT = 35
 
   let logMessageBeingViewed: FormattedMessage
 
@@ -159,7 +160,7 @@
                 ></td
               >
               {#each $logStore.columns as col (col)}
-                <td>{msg.formattedMessage[col] || ''}</td>
+                <td>{@html unescape(msg.formattedMessage[col])}</td>
               {/each}
             </tr>
           {/each}
@@ -233,7 +234,7 @@
     background-color: var(--gray-100);
   }
   .windowLogs-table td {
-    border-top: 1px solid var(--gray-200);
+    border-top: 1px solid var(--gray-100);
   }
   .windowLogs-table td:first-child {
     border-left: 1px solid var(--gray-200);
