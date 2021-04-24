@@ -12,14 +12,26 @@ import path from 'path'
 
 const LOG_WINDOW_SIZE = 100
 
+/**
+ * Status of each WS client that's currently connected
+ */
 type ClientStatus =
-  | { mode: 'tail' }
+  | {
+      mode: 'tail'
+      /**current filter query defined in the client */
+      filter: string
+      /**number of messages that the client knows about, AFTER filtering */
+      count: number
+    }
   | {
       mode: 'static'
-      // the `seq` of the first message the client is locked on
+      /**the `seq` of the first message the client is locked on */
       start: number
+      /**current filter query defined in the client */
+      filter: string
+      /**number of messages that the client knows about, AFTER filtering */
+      count: number
     }
-const clients: ClientStatus[] = []
 
 /**Contains all the logs that came into the server up until now */
 const logs: LogMessage[] = []
@@ -56,11 +68,13 @@ server.listen(config.port, () => {
 const setupLogStream = () =>
   pipe(
     () => createReadlineStream(),
+    // optionally log the message to the server's console
     tap(rawMessage => {
       if (config.stdout) {
         console.log(rawMessage)
       }
     }),
+    // parse the message with the currently configured parser
     map(rawMessage => {
       const data = config.parseRawMessage(rawMessage)
       const msg: LogMessage = {
@@ -71,6 +85,7 @@ const setupLogStream = () =>
       logs.push(msg)
       return msg
     }),
+    // potentially, send the message to all currently connected clients
     tap((rawLog: LogMessage) => {
       const updateMsg: ServerMessage = {
         type: 'update',
@@ -78,18 +93,30 @@ const setupLogStream = () =>
         message: rawLog,
       }
       wss.clients.forEach(ws => {
-        ws.send(encode(updateMsg))
+        const status = getWsClientStatus(ws)
+        const matcher = isIndexMatch(status.filter)
+        // only send the new message to the client if it passes the client's filter
+        if (matcher(updateMsg.message.index)) {
+          ws.send(encode(updateMsg))
+        }
       })
     }),
   )
+
+function updateWsClientStatus(ws: WebSocket, newStatus: ClientStatus) {
+  ;(ws as any)._status = newStatus
+}
+
+function getWsClientStatus(ws: WebSocket): ClientStatus {
+  return (ws as any)._status
+}
 
 /**
  * Function executed every time a new WS client connects to the server.
  * This will send a `InitMessage` to that client, so it can immediately start showing to the user.
  */
 function setupNewClient(ws: WebSocket) {
-  const clientId = clients.length
-  clients.push({ mode: 'tail' })
+  updateWsClientStatus(ws, { mode: 'tail', filter: '' })
 
   // send a window with the last logs to newly registered clients
   ws.send(encode(buildTailMessage('')))
@@ -97,8 +124,10 @@ function setupNewClient(ws: WebSocket) {
   ws.on('message', encodedMsg => {
     const msg = decode(encodedMsg) as ClientMessage
     if (msg.mode == 'tail') {
+      updateWsClientStatus(ws, { mode: 'tail', filter: msg.filter })
       ws.send(encode(buildTailMessage(msg.filter)))
     } else if (msg.mode == 'static') {
+      updateWsClientStatus(ws, { mode: 'static', start: msg.offsetSeq, filter: msg.filter })
       ws.send(encode(buildStaticMessage(msg.filter, msg.offsetSeq)))
     }
   })

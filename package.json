@@ -5,7 +5,7 @@
   "main": "index.js",
   "files": ["build/"],
   "scripts": {
-    "tail": "tail -n 100000 -f nginx.log | node --inspect=0 --enable-source-maps build/server.js -k",
+    "tail": "tail -f ~/app-logs.log | node --inspect=0 --enable-source-maps build/server.js -k",
     "cat": "cat log.log | node --inspect=0 --enable-source-maps build/server.js",
     "start": "concurrently 'npm:tsc-watch' 'npm:public:dev'",
     "tsc-watch": "tsc-watch --outDir build --noClear --onSuccess 'npm run tail'",
