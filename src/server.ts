@@ -93,20 +93,36 @@ const setupLogStream = () =>
         message: rawLog,
       }
       wss.clients.forEach(ws => {
-        const status = getWsClientStatus(ws)
-        const matcher = isIndexMatch(status.filter)
-        // only send the new message to the client if it passes the client's filter
-        if (matcher(updateMsg.message.index)) {
-          ws.send(encode(updateMsg))
-        }
+        updateWsClientStatus(ws, status => {
+          // only send the new message to the client if it passes the client's filter
+          const matcher = isIndexMatch(status.filter)
+          if (matcher(updateMsg.message.index)) {
+            ws.send(encode({ ...updateMsg, message: { ...updateMsg.message } }))
+            return { ...status, count: status.count + 1 }
+          } else {
+            return status
+          }
+        })
       })
     }),
   )
 
-function updateWsClientStatus(ws: WebSocket, newStatus: ClientStatus) {
-  ;(ws as any)._status = newStatus
+/**
+ * Update the status associated with a particular WS client
+ * @param ws the WS client instance
+ * @param statusFn a function that receives the current status and returns the new one
+ */
+function updateWsClientStatus(
+  ws: WebSocket,
+  statusFn: (currentStatus: ClientStatus) => ClientStatus,
+) {
+  const currentStatus = getWsClientStatus(ws)
+  ;(ws as any)._status = statusFn(currentStatus)
 }
 
+/**
+ * Get the status associated with a particular wS client
+ */
 function getWsClientStatus(ws: WebSocket): ClientStatus {
   return (ws as any)._status
 }
@@ -116,18 +132,31 @@ function getWsClientStatus(ws: WebSocket): ClientStatus {
  * This will send a `InitMessage` to that client, so it can immediately start showing to the user.
  */
 function setupNewClient(ws: WebSocket) {
-  updateWsClientStatus(ws, { mode: 'tail', filter: '' })
+  updateWsClientStatus(ws, () => ({ mode: 'tail', filter: '', count: 0 }))
 
   // send a window with the last logs to newly registered clients
   ws.send(encode(buildTailMessage('')))
 
+  // when the client send a message, it means one of the following:
+  // - change mode to tail/static
+  // - specify a new filter query
+  // - change the offset of static mode
   ws.on('message', encodedMsg => {
     const msg = decode(encodedMsg) as ClientMessage
     if (msg.mode == 'tail') {
-      updateWsClientStatus(ws, { mode: 'tail', filter: msg.filter })
+      updateWsClientStatus(ws, currentStatus => ({
+        ...currentStatus,
+        mode: 'tail',
+        filter: msg.filter,
+      }))
       ws.send(encode(buildTailMessage(msg.filter)))
     } else if (msg.mode == 'static') {
-      updateWsClientStatus(ws, { mode: 'static', start: msg.offsetSeq, filter: msg.filter })
+      updateWsClientStatus(ws, currentStatus => ({
+        ...currentStatus,
+        mode: 'static',
+        start: msg.offsetSeq,
+        filter: msg.filter,
+      }))
       ws.send(encode(buildStaticMessage(msg.filter, msg.offsetSeq)))
     }
   })
