@@ -16,12 +16,14 @@ interface TailLogStore {
   filter: string
   formatter: string
   columns: string[]
+  maxMessages: number
   window: FormattedMessage[]
   latest: FormattedMessage[]
 }
 interface StaticLogStore {
   mode: 'static'
-  offsetSeq: number
+  offsetStart: number
+  maxMessages: number
   count: number
   filter: string
   formatter: string
@@ -34,7 +36,7 @@ interface StaticLogStore {
  * It can be saved (e.g., to **localStorage**) and later used to restore the app to a known state) */
 type LogStore = TailLogStore | StaticLogStore
 
-const LOG_WINDOW_SIZE = 100
+const DEFAULT_WINDOW_SIZE = 100
 const LATEST_LOG_WINDOW_SIZE = 2
 
 function createLogStore(initialValue?: LogStore) {
@@ -46,6 +48,7 @@ function createLogStore(initialValue?: LogStore) {
       filter: '',
       formatter: formatter.getFormatter(),
       columns: [],
+      maxMessages: DEFAULT_WINDOW_SIZE,
       window: [],
       latest: [],
     }
@@ -57,6 +60,7 @@ function createLogStore(initialValue?: LogStore) {
   const ws = new WebSocket(`ws://${serverAddress}/`)
   ws.onopen = function () {
     console.log('WebSocket Client Connected')
+    sendToServer({ mode: 'tail', filter: '', maxMessages: DEFAULT_WINDOW_SIZE })
   }
   ws.onmessage = function (e) {
     const msg = decode(e.data) as ServerMessage
@@ -67,22 +71,24 @@ function createLogStore(initialValue?: LogStore) {
         if (msg.mode === 'tail') {
           return {
             mode: msg.mode,
-            count: msg.size,
+            count: msg.window.size,
             filter: currentValue.filter,
             formatter: currentValue.formatter,
             columns,
-            window: msg.window.map(logFormatter),
+            maxMessages: currentValue.maxMessages,
+            window: msg.window.messages.map(logFormatter),
             latest: [],
           }
         } else if (msg.mode === 'static') {
           return {
             mode: msg.mode,
-            count: msg.size,
+            count: msg.window.size,
             filter: currentValue.filter,
             formatter: currentValue.formatter,
             columns,
-            window: msg.window.map(logFormatter),
-            offsetSeq: msg.offsetSeq,
+            offsetStart: msg.window.offsetStart,
+            maxMessages: msg.window.maxMessages,
+            window: msg.window.messages.map(logFormatter),
             latest: [],
           }
         }
@@ -91,7 +97,10 @@ function createLogStore(initialValue?: LogStore) {
           return {
             ...currentValue,
             count: msg.size,
-            window: [...currentValue.window.slice(-LOG_WINDOW_SIZE), logFormatter(msg.message)],
+            window: [
+              ...currentValue.window.slice(-currentValue.maxMessages + 1),
+              logFormatter(msg.message),
+            ],
           }
         } else if (currentValue.mode === 'static') {
           return {
@@ -111,12 +120,41 @@ function createLogStore(initialValue?: LogStore) {
 
   return {
     subscribe,
+    resizeWindow: (newSize: number, rowHeight: number) => {
+      const maxMessages = Math.ceil(newSize / rowHeight)
+      update(state => {
+        if (state.mode == 'tail') {
+          sendToServer({
+            mode: state.mode,
+            maxMessages,
+            filter: state.filter,
+          })
+        } else if (state.mode == 'static') {
+          sendToServer({
+            mode: state.mode,
+            offsetStart: state.offsetStart,
+            maxMessages,
+            filter: state.filter,
+          })
+        }
+        return { ...state, maxMessages }
+      })
+    },
     changeFilter: (newFilter: string) => {
       update(state => {
         if (state.mode == 'tail') {
-          sendToServer({ mode: state.mode, filter: newFilter })
+          sendToServer({
+            mode: state.mode,
+            maxMessages: state.maxMessages,
+            filter: newFilter,
+          })
         } else if (state.mode == 'static') {
-          sendToServer({ mode: state.mode, offsetSeq: state.offsetSeq, filter: newFilter })
+          sendToServer({
+            mode: state.mode,
+            offsetStart: state.offsetStart,
+            maxMessages: state.maxMessages,
+            filter: newFilter,
+          })
         }
         return {
           ...state,
@@ -126,32 +164,46 @@ function createLogStore(initialValue?: LogStore) {
     },
     changeToTail: () => {
       update(state => {
-        sendToServer({ mode: 'tail', filter: state.filter })
+        sendToServer({ mode: 'tail', maxMessages: state.maxMessages, filter: state.filter })
         return {
           ...state,
           mode: 'tail',
-          offsetSeq: undefined,
         }
       })
     },
-    changeToStatic: (offsetSeq: number) => {
+    changeToStatic: (offsetStart: number) => {
       update(state => {
-        sendToServer({ mode: 'static', offsetSeq, filter: state.filter })
+        sendToServer({
+          mode: 'static',
+          offsetStart,
+          maxMessages: state.maxMessages,
+          filter: state.filter,
+        })
         return {
           ...state,
           mode: 'static',
-          offsetSeq,
+          offsetStart,
         }
       })
     },
     changeFormatter: (newFormatter: string) => {
       update(state => {
         // re-fetch data from the server so it can be formatted with the new formatter
-        sendToServer({
-          mode: state.mode,
-          offsetSeq: state.mode == 'static' ? state.offsetSeq : undefined,
-          filter: state.filter,
-        })
+        if (state.mode == 'tail') {
+          sendToServer({
+            mode: state.mode,
+            maxMessages: state.maxMessages,
+            // offset: state.mode == 'static' ? state.offset : undefined,
+            filter: state.filter,
+          })
+        } else if (state.mode == 'static') {
+          sendToServer({
+            mode: state.mode,
+            offsetStart: state.offsetStart,
+            maxMessages: state.maxMessages,
+            filter: state.filter,
+          })
+        }
 
         // save the new formatter
         formatter.updateFormatter(newFormatter)
@@ -213,3 +265,4 @@ const parseFormatter = memoizeOne(
 
 const logStore = createLogStore()
 export { logStore, formatLogMessage, parseFormatter }
+export type { LogStore }

@@ -1,12 +1,13 @@
 <script lang="ts">
   import { logStore } from './log-store'
+  import type { LogStore } from './log-store'
   import LogMessageDetails from './LogMessageDetails.svelte'
   import type { FormattedMessage, LogMessage } from './types'
   import debounce from 'lodash/debounce'
   import { unescape } from './utils'
 
   // height of each row, in pixels
-  const ROW_HEIGHT = 35
+  const ROW_HEIGHT = 30
 
   let logMessageBeingViewed: FormattedMessage
 
@@ -24,28 +25,24 @@
     }
   }
 
-  // TODO can be memoized
-  function calcBeforeWindowRowHeigh(logWindow: FormattedMessage[]) {
-    if (!logWindow || !logWindow.length) {
-      return 0
-    } else {
-      return (logWindow[0].seq - 1) * ROW_HEIGHT
+  function calcBeforeWindowRowHeigh(logStore: LogStore) {
+    if (logStore.mode == 'tail') {
+      return Math.max(logStore.count - logStore.maxMessages, 0) * ROW_HEIGHT
+    } else if (logStore.mode == 'static') {
+      return Math.max(logStore.offsetStart, 0) * ROW_HEIGHT
     }
   }
 
-  // TODO can be memoized
-  function calcAfterWindowRowHeight(logWindow: FormattedMessage[], logCount: number) {
-    if (!logWindow || !logWindow.length) {
+  function calcAfterWindowRowHeight(logStore: LogStore) {
+    if (logStore.mode == 'tail') {
       return 0
-    } else {
-      const lastSeqInWindow = logWindow[logWindow.length - 1].seq
-      return (logCount - lastSeqInWindow) * ROW_HEIGHT
+    } else if (logStore.mode == 'static') {
+      const offsetEnd = Math.min(logStore.offsetStart + logStore.maxMessages, logStore.count)
+      return Math.max(logStore.count - offsetEnd, 0) * ROW_HEIGHT
     }
   }
 
   const isScrolledToBottom = (el: Element) => el.scrollHeight - el.scrollTop - el.clientHeight < 1
-
-  const calcSeqByOffset = (offset: number, logCount: number) => Math.floor(offset / ROW_HEIGHT)
 
   /**
    * Calculate the seq the user has offset to, and requet data from the server around that offset.
@@ -58,9 +55,19 @@
           logStore.changeToTail()
         }
       } else {
-        const seq = calcSeqByOffset(el.scrollTop, $logStore.count) + 1
-        logStore.changeToStatic(seq)
+        const percStart = el.scrollTop / el.scrollHeight
+        const offsetStart = Math.floor(percStart * $logStore.count)
+        logStore.changeToStatic(offsetStart)
       }
+    },
+    100,
+    { leading: false, trailing: true },
+  )
+
+  const onResize = debounce(
+    (ev: Event) => {
+      const visibleHeight = document.getElementById('windowLogs').clientHeight
+      logStore.resizeWindow(visibleHeight, ROW_HEIGHT)
     },
     100,
     { leading: false, trailing: true },
@@ -89,6 +96,7 @@
   }
 </script>
 
+<svelte:window on:resize={onResize} on:load={onResize} />
 <main>
   <!-- show a modal with details on the currently selected message -->
   {#if logMessageBeingViewed}
@@ -117,7 +125,7 @@
       <small>in <strong>follow</strong> mode</small>
     {/if}
     {#if $logStore.mode == 'static'}
-      <small>frozen at offset <strong>{$logStore.offsetSeq}</strong></small>
+      <small><strong>frozen</strong> at {$logStore.window[0]?.seq} </small>
     {/if}
   </h1>
 
@@ -147,7 +155,7 @@
         <tbody>
           <tr
             class="windowLogs-beforeWindowRow"
-            style="height: {calcBeforeWindowRowHeigh($logStore.window)}px"
+            style="height: {calcBeforeWindowRowHeigh($logStore)}px"
           />
           {#each $logStore.window as msg (msg.seq)}
             <tr style="height: {ROW_HEIGHT}px">
@@ -166,7 +174,7 @@
           {/each}
           <tr
             class="windowLogs-afterWindowRow"
-            style="height: {calcAfterWindowRowHeight($logStore.window, $logStore.count)}px"
+            style="height: {calcAfterWindowRowHeight($logStore)}px"
           />
         </tbody>
       </table>
@@ -209,6 +217,9 @@
     padding: 2px 7px;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .windowLogs-table td {
+    font-family: monospace;
   }
   .windowLogs-table th {
     position: sticky;
