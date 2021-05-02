@@ -10,16 +10,28 @@ import { config } from './config'
 import { isIndexMatch } from './log-index'
 import path from 'path'
 
-const LOG_WINDOW_SIZE = 100
-
+/**
+ * Status of each WS client that's currently connected
+ */
 type ClientStatus =
-  | { mode: 'tail' }
+  | {
+      mode: 'tail'
+      /**current filter query defined in the client */
+      filter: string
+      /**number of messages that the client knows about, AFTER filtering */
+      count: number
+    }
   | {
       mode: 'static'
-      // the `seq` of the first message the client is locked on
-      start: number
+      /**the index of the first message the client is locked on */
+      offsetStart: number
+      /**Maximum number of messages that should be sent to the client */
+      maxMessages: number
+      /**current filter query defined in the client */
+      filter: string
+      /**number of messages that the client knows about, AFTER filtering */
+      count: number
     }
-const clients: ClientStatus[] = []
 
 /**Contains all the logs that came into the server up until now */
 const logs: LogMessage[] = []
@@ -56,11 +68,13 @@ server.listen(config.port, () => {
 const setupLogStream = () =>
   pipe(
     () => createReadlineStream(),
+    // optionally log the message to the server's console
     tap(rawMessage => {
       if (config.stdout) {
         console.log(rawMessage)
       }
     }),
+    // parse the message with the currently configured parser
     map(rawMessage => {
       const data = config.parseRawMessage(rawMessage)
       const msg: LogMessage = {
@@ -71,62 +85,114 @@ const setupLogStream = () =>
       logs.push(msg)
       return msg
     }),
+    // potentially, send the message to all currently connected clients
     tap((rawLog: LogMessage) => {
-      const updateMsg: ServerMessage = {
-        type: 'update',
-        size: logs.length,
-        message: rawLog,
-      }
       wss.clients.forEach(ws => {
-        ws.send(encode(updateMsg))
+        updateWsClientStatus(ws, status => {
+          const updateMsg: ServerMessage = {
+            type: 'update',
+            size: status.count + 1,
+            message: rawLog,
+          }
+          // only send the new message to the client if it passes the client's filter
+          const matcher = isIndexMatch(status.filter)
+          if (matcher(updateMsg.message.index)) {
+            ws.send(encode({ ...updateMsg, message: { ...updateMsg.message } }))
+            return { ...status, count: updateMsg.size }
+          } else {
+            return status
+          }
+        })
       })
     }),
   )
+
+/**
+ * Update the status associated with a particular WS client
+ * @param ws the WS client instance
+ * @param statusFn a function that receives the current status and returns the new one
+ */
+function updateWsClientStatus(
+  ws: WebSocket,
+  statusFn: (currentStatus: ClientStatus) => ClientStatus,
+) {
+  const currentStatus = getWsClientStatus(ws)
+  ;(ws as any)._status = statusFn(currentStatus)
+}
+
+/**
+ * Get the status associated with a particular wS client
+ */
+function getWsClientStatus(ws: WebSocket): ClientStatus {
+  return (ws as any)._status
+}
 
 /**
  * Function executed every time a new WS client connects to the server.
  * This will send a `InitMessage` to that client, so it can immediately start showing to the user.
  */
 function setupNewClient(ws: WebSocket) {
-  const clientId = clients.length
-  clients.push({ mode: 'tail' })
+  updateWsClientStatus(ws, () => ({ mode: 'tail', filter: '', count: 0 }))
 
-  // send a window with the last logs to newly registered clients
-  ws.send(encode(buildTailMessage('')))
-
+  // when the client send a message, it means one of the following:
+  // - change mode to tail/static
+  // - specify a new filter query
+  // - change the offset of static mode
   ws.on('message', encodedMsg => {
     const msg = decode(encodedMsg) as ClientMessage
+    const matcher = isIndexMatch(msg.filter)
+    const filteredLogs = logs.filter(l => matcher(l.index))
     if (msg.mode == 'tail') {
-      ws.send(encode(buildTailMessage(msg.filter)))
+      updateWsClientStatus(ws, currentStatus => ({
+        ...currentStatus,
+        mode: 'tail',
+        filter: msg.filter,
+        count: filteredLogs.length,
+      }))
+      ws.send(encode(buildTailMessage(filteredLogs, msg.maxMessages)))
     } else if (msg.mode == 'static') {
-      ws.send(encode(buildStaticMessage(msg.filter, msg.offsetSeq)))
+      updateWsClientStatus(ws, currentStatus => ({
+        ...currentStatus,
+        mode: 'static',
+        offsetStart: msg.offsetStart,
+        maxMessages: msg.maxMessages,
+        filter: msg.filter,
+        count: filteredLogs.length,
+      }))
+      ws.send(encode(buildStaticMessage(filteredLogs, msg.offsetStart, msg.maxMessages)))
     }
   })
 
-  function buildTailMessage(filter: string): ServerMessage {
-    const matcher = isIndexMatch(filter)
-    const filteredLogs = logs.filter(l => matcher(l.index)).map((l, i) => ({ ...l, seq: i + 1 }))
+  function buildTailMessage(filteredLogs: LogMessage[], maxMessages: number): ServerMessage {
     return {
       type: 'init',
       mode: 'tail',
-      size: filteredLogs.length,
-      offsetSeq: -1,
-      window: filteredLogs.slice(-LOG_WINDOW_SIZE),
+      totalSize: logs.length,
+      window: {
+        size: filteredLogs.length,
+        maxMessages,
+        messages: filteredLogs.slice(-maxMessages),
+      },
     }
   }
 
-  function buildStaticMessage(filter: string, offsetSeq: number): ServerMessage {
-    const matcher = isIndexMatch(filter)
-    const filteredLogs = logs.filter(l => matcher(l.index)).map((l, i) => ({ ...l, seq: i + 1 }))
+  function buildStaticMessage(
+    filteredLogs: LogMessage[],
+    offsetStart: number,
+    maxMessages: number,
+  ): ServerMessage {
+    const totalSize = logs.length
+    const filteredSize = filteredLogs.length
     return {
       type: 'init',
       mode: 'static',
-      size: filteredLogs.length,
-      offsetSeq,
-      window: filteredLogs.slice(
-        Math.max(offsetSeq - LOG_WINDOW_SIZE / 2, 0),
-        offsetSeq + LOG_WINDOW_SIZE / 2,
-      ),
+      totalSize,
+      window: {
+        size: filteredSize,
+        offsetStart,
+        maxMessages,
+        messages: filteredLogs.slice(offsetStart, offsetStart + maxMessages),
+      },
     }
   }
 }

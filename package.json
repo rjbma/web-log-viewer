@@ -1,11 +1,13 @@
 {
   "name": "web-log-viewer",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "",
   "main": "index.js",
-  "files": ["build/"],
+  "files": [
+    "build/"
+  ],
   "scripts": {
-    "tail": "tail -n 100000 -f nginx.log | node --inspect=0 --enable-source-maps build/server.js -k",
+    "tail": "tail -n 1000 -f ~/app-logs.log | node --inspect=0 --enable-source-maps build/server.js -k",
     "cat": "cat log.log | node --inspect=0 --enable-source-maps build/server.js",
     "start": "concurrently 'npm:tsc-watch' 'npm:public:dev'",
     "tsc-watch": "tsc-watch --outDir build --noClear --onSuccess 'npm run tail'",
@@ -20,7 +22,14 @@
     "web-log-viewer": "./bin/global.js"
   },
   "preferGlobal": true,
-  "keywords": ["json-log-viewer", "json", "web-log-viewer", "logs", "log4j", "winston"],
+  "keywords": [
+    "json-log-viewer",
+    "json",
+    "web-log-viewer",
+    "logs",
+    "log4j",
+    "winston"
+  ],
   "author": "rjbma",
   "license": "ISC",
   "dependencies": {
@@ -42,6 +51,7 @@
     "@types/node": "^14.14.27",
     "@types/ramda": "^0.27.38",
     "@types/ws": "^7.4.0",
+    "concurrently": "^6.0.2",
     "parcel-bundler": "^1.12.4",
     "ts-node-dev": "^1.1.1",
     "tsc-watch": "^4.2.9",
