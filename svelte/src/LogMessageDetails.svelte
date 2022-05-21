@@ -8,7 +8,8 @@
   import 'brace/keybinding/vim'
 
   export let logMessage: FormattedMessage
-  export let logSize: number
+  export let firstInWindowSeq: number
+  export let lastInWindowSeq: number
   export let formatter: string
 
   const dispatch = createEventDispatcher()
@@ -25,8 +26,8 @@
   }
 
   // keep track of whether the first/last message is being displayed
-  $: isFirst = logMessage.seq == 1
-  $: isLast = logMessage.seq == logSize
+  $: isFirst = logMessage.seq == firstInWindowSeq
+  $: isLast = logMessage.seq == lastInWindowSeq
   // keep the format example updated
   $: formattedExample = (() => {
     try {

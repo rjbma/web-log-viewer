@@ -248,20 +248,18 @@ const execFn = (fn: LogColumnFormatter, msg: LogMessage) => {
   }
 }
 
-const parseFormatter = memoizeOne(
-  (formatter: string): LogFormatter => {
-    let result
-    try {
-      result = eval(formatter)
-    } catch (err) {
-      throw err
-      // console.error('Invalid formatter object. Reverting to default format')
-      // console.log(err)
-      // result = eval(DEFAULT_LOG_FORMATTER)
-    }
-    return result
-  },
-)
+const parseFormatter = memoizeOne((formatter: string): LogFormatter => {
+  let result
+  try {
+    result = eval(formatter)
+  } catch (err) {
+    throw err
+    // console.error('Invalid formatter object. Reverting to default format')
+    // console.log(err)
+    // result = eval(DEFAULT_LOG_FORMATTER)
+  }
+  return result
+})
 
 const logStore = createLogStore()
 export { logStore, formatLogMessage, parseFormatter }

@@ -42,7 +42,8 @@
     }
   }
 
-  const isScrolledToBottom = (el: Element) => el.scrollHeight - el.scrollTop - el.clientHeight < 1
+  const isScrolledToBottom = (el: Element) =>
+    Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight) < 10
 
   /**
    * Calculate the seq the user has offset to, and requet data from the server around that offset.
@@ -88,21 +89,21 @@
 
   function viewRelativeLog(delta: 1 | -1) {
     const currentIndex = $logStore.window.findIndex(l => l === logMessageBeingViewed)
-    if (currentIndex == -1) {
-      logMessageBeingViewed = undefined
-    } else {
-      logMessageBeingViewed = $logStore.window[currentIndex + delta]
+    const newLogMessageBeingViewed = $logStore.window[currentIndex + delta]
+    if (newLogMessageBeingViewed) {
+      logMessageBeingViewed = newLogMessageBeingViewed
     }
   }
 </script>
 
-<svelte:window on:resize={onResize} on:load={onResize} />
+<svelte:window on:resize={onResize} />
 <main>
   <!-- show a modal with details on the currently selected message -->
   {#if logMessageBeingViewed}
     <LogMessageDetails
       logMessage={logMessageBeingViewed}
-      logSize={$logStore.count}
+      firstInWindowSeq={$logStore.window[0]?.seq}
+      lastInWindowSeq={$logStore.window[$logStore.window.length - 1]?.seq}
       formatter={$logStore.formatter}
       on:viewPrevious={() => viewRelativeLog(-1)}
       on:viewNext={() => viewRelativeLog(1)}
