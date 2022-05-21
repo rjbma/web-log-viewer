@@ -159,7 +159,10 @@
             style="height: {calcBeforeWindowRowHeigh($logStore)}px"
           />
           {#each $logStore.window as msg (msg.seq)}
-            <tr style="height: {ROW_HEIGHT}px">
+            <tr
+              style="height: {ROW_HEIGHT}px"
+              class={logMessageBeingViewed?.seq == msg.seq ? 'windowLogs-selectedRow' : ''}
+            >
               <td class="windowLogs-viewLogMessageButton"
                 ><button
                   tabindex={logMessageBeingViewed ? -1 : 0}
@@ -242,8 +245,9 @@
     border-top-right-radius: 5px;
     border-right: 1px solid var(--gray-200);
   }
+  .windowLogs-table tr.windowLogs-selectedRow td,
   .windowLogs-table tr:hover td {
-    background-color: var(--gray-100);
+    background-color: rgba(111, 161, 87, 0.15);
   }
   .windowLogs-table td {
     border-top: 1px solid var(--gray-100);
