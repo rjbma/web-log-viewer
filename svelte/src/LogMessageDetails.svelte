@@ -6,11 +6,12 @@
   import ace from 'brace'
   import 'brace/mode/javascript'
   import 'brace/keybinding/vim'
+  import type { FormatterConfig } from './log-formatter'
 
   export let logMessage: FormattedMessage
   export let firstInWindowSeq: number
   export let lastInWindowSeq: number
-  export let formatter: string
+  export let formatter: FormatterConfig
 
   const dispatch = createEventDispatcher()
   const closeDialog = () => dispatch('closeAndUpdateFormatter', { newFormatter: formatter })
@@ -36,15 +37,15 @@
         data: logMessage.rawMessage,
         index: [],
       }
-      return formatLogMessage(formatter)(msg)
+      return formatLogMessage(formatter.fn)(msg)
     } catch (err) {
       return { formattedMessage: err.message }
     }
   })()
   // whenever the formatter changes, update the ace editor
   $: {
-    if (editor && formatter !== editor.getValue()) {
-      editor.setValue(formatter, 1)
+    if (editor && formatter.fn !== editor.getValue()) {
+      editor.setValue(formatter.fn, 1)
     }
   }
 
@@ -53,7 +54,7 @@
   onMount(() => {
     editor = ace.edit('editor')
     editor.getSession().setMode('ace/mode/javascript')
-    editor.setValue(formatter, 1)
+    editor.setValue(formatter.fn, 1)
     editor.addEventListener('change', (e, editor) => {
       formatter = editor.getValue()
     })
@@ -88,26 +89,39 @@
     </div>
 
     <!-- allow the user to configure the formatter, taking the current log as example -->
-    <h3 class="subtitle">Configure the log format</h3>
-    <div class="formatterConfig">
-      <div class="formatterConfig-value">
-        <h4>
-          Formatter
-          <button class="button button--small" on:click={resetFormatter}>reset</button>
-          <div class="formatterConfig-keybindingSelector">
-            <button on:click={() => (keybinding = 'vim')} class:selected={keybinding == 'vim'}
-              >vim</button
-            >
-            <button on:click={() => (keybinding = 'normal')} class:selected={keybinding == 'normal'}
-              >normal</button
-            >
-          </div>
-        </h4>
-        <div id="editor" class="code" />
-      </div>
-      <div class="formatterConfig-preview">
-        <h4>Example</h4>
-        <div class="code">{formatObject(formattedExample.formattedMessage)}</div>
+    <div
+      class={$logStore.formatter.collapseConfig
+        ? 'logMessageDetails-config logMessageDetails-config--collapsed'
+        : 'logMessageDetails-config'}
+    >
+      <button
+        class="subtitle button logMessageDetails-configToggler"
+        on:click={logStore.toggleFormatterConfig}
+      >
+        <span>&blacktriangledown</span>
+        Configure the log format
+      </button>
+      <div class="formatterConfig">
+        <div class="formatterConfig-value">
+          <h4>
+            Formatter
+            <button class="button button--small" on:click={resetFormatter}>reset</button>
+            <div class="formatterConfig-keybindingSelector">
+              <button on:click={() => (keybinding = 'vim')} class:selected={keybinding == 'vim'}
+                >vim</button
+              >
+              <button
+                on:click={() => (keybinding = 'normal')}
+                class:selected={keybinding == 'normal'}>normal</button
+              >
+            </div>
+          </h4>
+          <div id="editor" class="code" />
+        </div>
+        <div class="formatterConfig-preview">
+          <h4>Example</h4>
+          <div class="code">{formatObject(formattedExample.formattedMessage)}</div>
+        </div>
       </div>
     </div>
   </div>
@@ -141,6 +155,8 @@
     margin-right: auto;
   }
   .logMessageDetails-container {
+    display: flex;
+    flex-direction: column;
     background-color: #f5f5f5;
     position: relative;
     max-width: 1200px;
@@ -168,10 +184,30 @@
     width: 100%;
   }
 
+  .logMessageDetails-config .subtitle {
+    margin-top: 30px;
+    margin-bottom: 14px;
+    border: none;
+    background-color: transparent;
+    padding: 0px;
+    text-transform: uppercase;
+    font-size: 17px;
+    letter-spacing: 1.3px;
+  }
+  .logMessageDetails-configToggler span {
+    display: inline-block;
+  }
+  .logMessageDetails-config--collapsed .logMessageDetails-configToggler span {
+    transform: rotate(-90deg);
+  }
   .formatterConfig {
     display: flex;
     justify-content: space-between;
     align-items: stretch;
+  }
+  .logMessageDetails-config--collapsed .formatterConfig {
+    max-height: 0px;
+    overflow: hidden;
   }
   .formatterConfig > * {
     width: 50%;
@@ -206,12 +242,12 @@
     font-weight: bold;
   }
   .formatterConfig-value .code {
-    height: 300px;
+    height: 200px;
     margin: 0px;
     overflow: hidden;
   }
   .formatterConfig-preview .code {
-    height: 300px;
+    height: 200px;
   }
   h3 {
     text-align: left;

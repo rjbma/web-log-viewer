@@ -1,6 +1,6 @@
 import memoizeOne from 'memoize-one'
 import { writable } from 'svelte/store'
-import { formatter } from './log-formatter'
+import { formatter, FormatterConfig } from './log-formatter'
 import type {
   ClientMessage,
   FormattedMessage,
@@ -14,7 +14,7 @@ interface TailLogStore {
   mode: 'tail'
   count: number
   filter: string
-  formatter: string
+  formatter: FormatterConfig
   columns: string[]
   maxMessages: number
   window: FormattedMessage[]
@@ -26,7 +26,7 @@ interface StaticLogStore {
   maxMessages: number
   count: number
   filter: string
-  formatter: string
+  formatter: FormatterConfig
   columns: string[]
   window: FormattedMessage[]
   latest: FormattedMessage[]
@@ -65,8 +65,8 @@ function createLogStore(initialValue?: LogStore) {
   ws.onmessage = function (e) {
     const msg = decode(e.data) as ServerMessage
     update(currentValue => {
-      const columns = Object.keys(parseFormatter(currentValue.formatter))
-      const logFormatter = formatLogMessage(currentValue.formatter)
+      const columns = Object.keys(parseFormatter(currentValue.formatter.fn))
+      const logFormatter = formatLogMessage(currentValue.formatter.fn)
       if (msg.type === 'init') {
         if (msg.mode === 'tail') {
           return {
@@ -186,7 +186,10 @@ function createLogStore(initialValue?: LogStore) {
         }
       })
     },
-    changeFormatter: (newFormatter: string) => {
+    toggleFormatterConfig: () => {
+      update(state => ({ ...state, formatter: formatter.toggleFormatterConfig() }))
+    },
+    changeFormatter: (newFormatterFn: string) => {
       update(state => {
         // re-fetch data from the server so it can be formatted with the new formatter
         if (state.mode == 'tail') {
@@ -206,10 +209,9 @@ function createLogStore(initialValue?: LogStore) {
         }
 
         // save the new formatter
-        formatter.updateFormatter(newFormatter)
         return {
           ...state,
-          formatter: newFormatter,
+          formatter: formatter.updateFormatterFn(newFormatterFn),
         }
       })
     },
