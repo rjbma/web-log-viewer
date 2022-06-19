@@ -14,7 +14,7 @@
   export let formatter: FormatterConfig
 
   const dispatch = createEventDispatcher()
-  const closeDialog = () => dispatch('closeAndUpdateFormatter', { newFormatter: formatter })
+  const closeDialog = () => dispatch('closeAndUpdateFormatter', { newFormatterFn: formatter.fn })
   const formatObject = (obj: any) => {
     if (typeof obj == 'string') {
       return obj
@@ -56,7 +56,7 @@
     editor.getSession().setMode('ace/mode/javascript')
     editor.setValue(formatter.fn, 1)
     editor.addEventListener('change', (e, editor) => {
-      formatter = editor.getValue()
+      formatter = { ...formatter, fn: editor.getValue() }
     })
   })
   $: {

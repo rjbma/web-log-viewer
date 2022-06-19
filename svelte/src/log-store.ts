@@ -189,7 +189,7 @@ function createLogStore(initialValue?: LogStore) {
     toggleFormatterConfig: () => {
       update(state => ({ ...state, formatter: formatter.toggleFormatterConfig() }))
     },
-    changeFormatter: (newFormatterFn: string) => {
+    changeFormatterFn: (newFormatterFn: string) => {
       update(state => {
         // re-fetch data from the server so it can be formatted with the new formatter
         if (state.mode == 'tail') {

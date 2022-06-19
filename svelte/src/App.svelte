@@ -108,10 +108,10 @@
       on:viewPrevious={() => viewRelativeLog(-1)}
       on:viewNext={() => viewRelativeLog(1)}
       on:closeAndUpdateFormatter={e => {
-        if (e.detail?.newFormatter) {
+        if (e.detail?.newFormatterFn) {
           // check if formatter has actually changed
-          if ($logStore.formatter != e.detail.newFormatter) {
-            logStore.changeFormatter(e.detail.newFormatter)
+          if ($logStore.formatter.fn != e.detail.newFormatterFn) {
+            logStore.changeFormatterFn(e.detail.newFormatterFn)
           }
         }
         logMessageBeingViewed = undefined
