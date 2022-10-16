@@ -7,6 +7,7 @@
   import 'brace/mode/javascript'
   import 'brace/keybinding/vim'
   import type { FormatterConfig } from './log-formatter'
+  import { stripAnsiEscapes } from './utils'
 
   export let logMessage: FormattedMessage
   export let firstInWindowSeq: number
@@ -15,11 +16,13 @@
 
   const dispatch = createEventDispatcher()
   const closeDialog = () => dispatch('closeAndUpdateFormatter', { newFormatterFn: formatter.fn })
-  const formatObject = (obj: any) => {
+  const formatObject = (obj: any, type: 'json' | 'json5') => {
     if (typeof obj == 'string') {
       return obj
+    } else if (type == 'json5') {
+      return stripAnsiEscapes(json5.stringify(obj, null, 2))
     } else {
-      return json5.stringify(obj, null, 2)
+      return stripAnsiEscapes(JSON.stringify(obj, null, 2))
     }
   }
   const resetFormatter = () => {
@@ -51,7 +54,13 @@
 
   let keybinding: 'vim' | 'normal' = 'vim'
   let editor: ace.Editor
+  let viewer: ace.Editor
   onMount(() => {
+    viewer = ace.edit('viewer')
+    viewer.setReadOnly(true)
+    viewer.getSession().setMode('ace/mode/javascript')
+    viewer.setValue(formatObject(logMessage.rawMessage, 'json'), 1)
+
     editor = ace.edit('editor')
     editor.getSession().setMode('ace/mode/javascript')
     editor.setValue(formatter.fn, 1)
@@ -84,9 +93,7 @@
       >
     </div>
     <h3 class="subtitle">Details of log message #{logMessage.seq}</h3>
-    <div class="logMessageDetails-value code">
-      {formatObject(logMessage.rawMessage)}
-    </div>
+    <div id="viewer" class="logMessageDetails-value code" />
 
     <!-- allow the user to configure the formatter, taking the current log as example -->
     <div
@@ -120,7 +127,7 @@
         </div>
         <div class="formatterConfig-preview">
           <h4>Example</h4>
-          <div class="code">{formatObject(formattedExample.formattedMessage)}</div>
+          <div class="code">{formatObject(formattedExample.formattedMessage, 'json5')}</div>
         </div>
       </div>
     </div>
@@ -167,13 +174,12 @@
     padding: 20px 30px;
     border-radius: 10px;
     box-shadow: 0px 2px 5px 0px #444;
-    max-height: calc(100% - 40px);
+    height: calc(100% - 40px);
     overflow: auto;
   }
   .code {
     white-space: pre;
     font-family: monospace;
-    color: #555;
     background-color: white;
     line-height: 1.2rem;
     text-align: left;
@@ -184,6 +190,9 @@
     width: 100%;
   }
 
+  .logMessageDetails-value {
+    flex-grow: 1;
+  }
   .logMessageDetails-config .subtitle {
     margin-top: 30px;
     margin-bottom: 14px;
