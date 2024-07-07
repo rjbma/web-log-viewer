@@ -4,6 +4,7 @@
   import LogMessageDetails from './LogMessageDetails.svelte'
   import type { FormattedMessage, LogMessage } from './types'
   import debounce from 'lodash/debounce'
+  import { throttle } from 'lodash'
   import { unescape } from './utils'
 
   // height of each row, in pixels
@@ -48,7 +49,7 @@
   /**
    * Calculate the seq the user has offset to, and requet data from the server around that offset.
    */
-  const onScroll = debounce(
+  const onScroll = throttle(
     (ev: Event) => {
       const el = ev.target as Element
       if (isScrolledToBottom(el)) {
@@ -61,7 +62,7 @@
         logStore.changeToStatic(offsetStart)
       }
     },
-    100,
+    10,
     { leading: false, trailing: true },
   )
 
