@@ -118,7 +118,7 @@ function App() {
 
                 <tr
                   className="windowLogs-afterWindowRow"
-                  style={{ height: `calcAfterWindowRowHeight(state)}px` }}
+                  style={{ height: `${calcAfterWindowRowHeight(state)}px` }}
                 />
               </tbody>
             </table>
@@ -134,6 +134,15 @@ function calcBeforeWindowRowHeigh(logStore: LogStore) {
     return Math.max(logStore.count - logStore.maxMessages, 0) * ROW_HEIGHT
   } else if (logStore.mode == 'static') {
     return Math.max(logStore.offsetStart, 0) * ROW_HEIGHT
+  }
+}
+
+function calcAfterWindowRowHeight(logStore: LogStore) {
+  if (logStore.mode == 'tail') {
+    return 0
+  } else if (logStore.mode == 'static') {
+    const offsetEnd = Math.min(logStore.offsetStart + logStore.maxMessages, logStore.count)
+    return Math.max(logStore.count - offsetEnd, 0) * ROW_HEIGHT
   }
 }
 
