@@ -43,12 +43,15 @@ type LogStore = TailLogStore | StaticLogStore
 type State =
   | {
       status: 'Initializing'
+      sendToServer: (msg: ClientMessage) => void
     }
   | ({
       status: 'Ready'
+      sendToServer: (msg: ClientMessage) => void
     } & LogStore)
   | {
       status: 'Disconnected'
+      sendToServer: (msg: ClientMessage) => void
     }
 
 type Transitions = {
@@ -60,6 +63,7 @@ type Transitions = {
     'Ready',
     { msg: ServerMessage & { type: 'update' } }
   >
+  scroll: TransitionWithParams<State, 'Ready', 'Ready', { element: Element }>
   // reconnect: Transition<State, 'Disconnected', 'Initializing'>
 }
 
@@ -71,6 +75,7 @@ const transitions: Transitions = {
     if (msg.mode === 'tail') {
       return {
         status: 'Ready',
+        sendToServer: current.sendToServer,
         mode: msg.mode,
         count: msg.window.size,
         filter: '',
@@ -83,6 +88,7 @@ const transitions: Transitions = {
     } else if (msg.mode === 'static') {
       return {
         status: 'Ready',
+        sendToServer: current.sendToServer,
         mode: msg.mode,
         count: msg.window.size,
         filter: '',
@@ -115,18 +121,56 @@ const transitions: Transitions = {
       throw assertExhaustive(current)
     }
   },
-  disconnect: () => ({
+  disconnect: current => ({
     status: 'Disconnected',
+    sendToServer: current.sendToServer,
   }),
+  scroll: (current, { element }) => {
+    const isScrolledToBottom = (el: Element) =>
+      Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight) < 10
+
+    /**
+     * Calculate the seq the user has offset to, and requet data from the server around that offset.
+     */
+    const el = element
+    if (isScrolledToBottom(el)) {
+      current.sendToServer({
+        mode: 'tail',
+        maxMessages: current.maxMessages,
+        filter: current.filter,
+      })
+      return {
+        ...current,
+        mode: 'tail',
+      }
+    } else {
+      const percStart = el.scrollTop / el.scrollHeight
+      const offsetStart = Math.floor(percStart * current.count)
+      current.sendToServer({
+        mode: 'static',
+        offsetStart,
+        maxMessages: current.maxMessages,
+        filter: current.filter,
+      })
+      return {
+        ...current,
+        mode: 'static',
+        offsetStart,
+      }
+    }
+  },
 }
 
 const serverAddress = 'localhost:8000'
 const ws = new WebSocket(`ws://${serverAddress}/`)
 
 function useLogViewerMachine() {
-  const machine = useMachine<State, Transitions, {}>(transitions, {}, { status: 'Initializing' })
-
   const sendToServer = (msg: ClientMessage) => ws.send(encode(msg))
+  const machine = useMachine<State, Transitions, {}>(
+    transitions,
+    {},
+    { status: 'Initializing', sendToServer },
+  )
 
   ws.onopen = function () {
     console.log('WebSocket Client Connected')

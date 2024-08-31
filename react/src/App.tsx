@@ -2,6 +2,7 @@ import { LogStore, useLogViewerMachine } from './wlv.machine'
 import './App.css'
 import { unescape } from './utils'
 import React from 'react'
+import { throttle } from 'lodash'
 
 const ROW_HEIGHT = 30
 
@@ -53,12 +54,13 @@ function App() {
         <section
           id="windowLogs"
           className="windowLogs"
-          onScroll={() => {
-            //TODO
-            //TODO
-            //TODO
-            //TODO
-          }}
+          onScroll={throttle(
+            ev => {
+              ev.target && transitions.scroll(state, { element: ev.target as Element })
+            },
+            100,
+            { leading: false, trailing: true },
+          )}
         >
           {state.count == 0 && <div className="message message--info">No messages found</div>}
           {state.count > 0 && (
