@@ -10,6 +10,7 @@ import {
 } from './types'
 import { assertExhaustive } from './utils'
 import memoizeOne from 'memoize-one'
+import { debounce } from 'lodash'
 
 const DEFAULT_WINDOW_SIZE = 100
 const LATEST_LOG_WINDOW_SIZE = 2
@@ -54,15 +55,23 @@ type State =
       sendToServer: (msg: ClientMessage) => void
     }
 
+type AnyStatus = State['status']
+
 type Transitions = {
-  initialize: TransitionWithParams<State, any, 'Ready', { msg: ServerMessage & { type: 'init' } }>
-  disconnect: Transition<State, any, 'Disconnected'>
+  initialize: TransitionWithParams<
+    State,
+    AnyStatus,
+    'Ready',
+    { msg: ServerMessage & { type: 'init' } }
+  >
+  disconnect: Transition<State, AnyStatus, 'Disconnected'>
   newMessage: TransitionWithParams<
     State,
     'Ready',
     'Ready',
     { msg: ServerMessage & { type: 'update' } }
   >
+  changeFilter: TransitionWithParams<State, 'Ready', 'Ready', { newFilterValue: string }>
   scroll: TransitionWithParams<State, 'Ready', 'Ready', { element: Element }>
   // reconnect: Transition<State, 'Disconnected', 'Initializing'>
 }
@@ -121,6 +130,13 @@ const transitions: Transitions = {
       throw assertExhaustive(current)
     }
   },
+  changeFilter: (current, { newFilterValue }) => {
+    sendFilterMessage({ state: current, newFilterValue })
+    return {
+      ...current,
+      filter: newFilterValue,
+    }
+  },
   disconnect: current => ({
     status: 'Disconnected',
     sendToServer: current.sendToServer,
@@ -165,8 +181,10 @@ const serverAddress = 'localhost:8000'
 const ws = new WebSocket(`ws://${serverAddress}/`)
 
 function useLogViewerMachine() {
-  const sendToServer = (msg: ClientMessage) => ws.send(encode(msg))
-  const machine = useMachine<State, Transitions, {}>(
+  const sendToServer = (msg: ClientMessage) => {
+    return ws.send(encode(msg))
+  }
+  const machine = useMachine<State, Transitions, Record<string, never>>(
     transitions,
     {},
     { status: 'Initializing', sendToServer },
@@ -191,7 +209,7 @@ function useLogViewerMachine() {
   return machine
 }
 
-const encode = (data: any) => JSON.stringify(data)
+const encode = (data: unknown) => JSON.stringify(data)
 const decode = (data: string) => JSON.parse(data)
 const formatLogMessage = (formatterStr: string) => {
   const formatter = parseFormatter(formatterStr)
@@ -208,6 +226,27 @@ const formatLogMessage = (formatterStr: string) => {
   })
 }
 
+const sendFilterMessage = debounce(
+  ({ state, newFilterValue }: { state: State & { status: 'Ready' }; newFilterValue: string }) => {
+    if (state.mode == 'tail') {
+      state.sendToServer({
+        mode: state.mode,
+        maxMessages: state.maxMessages,
+        filter: newFilterValue,
+      })
+    } else if (state.mode == 'static') {
+      state.sendToServer({
+        mode: state.mode,
+        offsetStart: state.offsetStart,
+        maxMessages: state.maxMessages,
+        filter: newFilterValue,
+      })
+    }
+  },
+  100,
+  { leading: false, trailing: true },
+)
+
 const execFn = (fn: LogColumnFormatter, msg: LogMessage) => {
   try {
     const res = fn(msg.data, msg.seq)
@@ -222,6 +261,7 @@ const parseFormatter = memoizeOne((formatter: string): LogFormatter => {
   try {
     result = eval(formatter)
   } catch (err) {
+    console.error('Invalid formatter object. Reverting to default format')
     throw err
     // console.error('Invalid formatter object. Reverting to default format')
     // console.log(err)

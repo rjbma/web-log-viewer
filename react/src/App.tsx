@@ -44,11 +44,10 @@ function App() {
             type="text"
             placeholder="enter text to filter messages"
             tabIndex={logMessageBeingViewed ? -1 : 0}
-            // TODO
-            // TODO
-            // TODO
-            // TODO
-            // on:keyup={onChangeFilter}
+            onKeyUp={(ev: React.KeyboardEvent<HTMLInputElement>) => {
+              const input = ev.target as HTMLInputElement
+              transitions.changeFilter(state, { newFilterValue: input.value })
+            }}
           />
         </section>
         <section
