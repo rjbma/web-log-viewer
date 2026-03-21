@@ -51,6 +51,12 @@
       editor.setValue(formatter.fn, 1)
     }
   }
+  // whenever the log message changes, update the viewer
+  $: {
+    if (viewer) {
+      viewer.setValue(formatObject(logMessage.rawMessage, 'json'), 1)
+    }
+  }
 
   let keybinding: 'vim' | 'normal' = 'vim'
   let editor: ace.Editor
