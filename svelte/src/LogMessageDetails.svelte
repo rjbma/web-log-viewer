@@ -54,7 +54,7 @@
   // whenever the log message changes, update the viewer
   $: {
     if (viewer) {
-      viewer.setValue(formatObject(logMessage.rawMessage, 'json'), 1)
+      viewer.setValue(formatObject(logMessage.rawMessage, 'json'), -1)
     }
   }
 
@@ -65,7 +65,7 @@
     viewer = ace.edit('viewer')
     viewer.setReadOnly(true)
     viewer.getSession().setMode('ace/mode/javascript')
-    viewer.setValue(formatObject(logMessage.rawMessage, 'json'), 1)
+    viewer.setValue(formatObject(logMessage.rawMessage, 'json'), -1)
 
     editor = ace.edit('editor')
     editor.getSession().setMode('ace/mode/javascript')
