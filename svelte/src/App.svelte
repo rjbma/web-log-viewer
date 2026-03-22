@@ -5,11 +5,30 @@
   import type { FormattedMessage, LogMessage } from './types'
   import debounce from 'lodash/debounce'
   import { unescape } from './utils'
+  import { tick } from 'svelte'
 
   // height of each row, in pixels
   const ROW_HEIGHT = 30
 
   let logMessageBeingViewed: FormattedMessage
+
+  // column width locking — prevents flickering when the window scrolls
+  let lockedWidths: number[] | null = null
+  let tableEl: HTMLTableElement
+  let prevLockKey = ''
+  $: lockKey = `${$logStore.formatter.fn}::${$logStore.filter ?? ''}`
+  $: if (lockKey !== prevLockKey) {
+    prevLockKey = lockKey
+    lockedWidths = null
+  }
+  $: if ($logStore.window.length > 0 && lockedWidths === null) {
+    tick().then(() => {
+      if (tableEl && lockedWidths === null) {
+        const headers = Array.from(tableEl.querySelectorAll('th'))
+        lockedWidths = headers.map(th => th.getBoundingClientRect().width)
+      }
+    })
+  }
 
   // scroll to bottom when new logs come in while on tail mode
   logStore.subscribe(logs => {
@@ -144,12 +163,12 @@
     {#if $logStore.window.length == 0}
       <div class="message message--info">No messages found</div>
     {:else}
-      <table class="windowLogs-table">
+      <table bind:this={tableEl} class="windowLogs-table" style={lockedWidths ? 'table-layout: fixed' : ''}>
         <thead>
           <tr style="height: {ROW_HEIGHT}px">
-            <th />
-            {#each $logStore.columns as col}
-              <th>{col}</th>
+            <th style={lockedWidths ? `width: ${lockedWidths[0]}px` : ''} />
+            {#each $logStore.columns as col, i}
+              <th style={lockedWidths ? `width: ${lockedWidths[i + 1]}px` : ''}>{col}</th>
             {/each}
           </tr>
         </thead>
@@ -207,7 +226,6 @@
   }
 
   .windowLogs-table {
-    table-layout: auto;
     white-space: nowrap;
     text-align: left;
     border-collapse: separate;
