@@ -76,12 +76,13 @@
         }
       } else {
         const percStart = el.scrollTop / el.scrollHeight
-        const offsetStart = Math.floor(percStart * $logStore.count)
+        const rawOffset = Math.floor(percStart * $logStore.count)
+        const offsetStart = Math.max(0, rawOffset - Math.floor($logStore.maxMessages / 2))
         logStore.changeToStatic(offsetStart)
       }
     },
-    100,
-    { leading: false, trailing: true },
+    50,
+    { leading: false, trailing: true, maxWait: 500 },
   )
 
   const onResize = debounce(
@@ -163,7 +164,11 @@
     {#if $logStore.window.length == 0}
       <div class="message message--info">No messages found</div>
     {:else}
-      <table bind:this={tableEl} class="windowLogs-table" style={lockedWidths ? 'table-layout: fixed' : ''}>
+      <table
+        bind:this={tableEl}
+        class="windowLogs-table"
+        style={lockedWidths ? 'table-layout: fixed' : ''}
+      >
         <thead>
           <tr style="height: {ROW_HEIGHT}px">
             <th style={lockedWidths ? `width: ${lockedWidths[0]}px` : ''} />
