@@ -150,11 +150,13 @@ const transitions: Transitions = {
      */
     const el = element
     if (isScrolledToBottom(el)) {
-      current.sendToServer({
-        mode: 'tail',
-        maxMessages: current.maxMessages,
-        filter: current.filter,
-      })
+      if (current.mode != 'tail') {
+        current.sendToServer({
+          mode: 'tail',
+          maxMessages: current.maxMessages,
+          filter: current.filter,
+        })
+      }
       return {
         ...current,
         mode: 'tail',
