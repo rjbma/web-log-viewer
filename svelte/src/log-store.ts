@@ -12,6 +12,7 @@ import type {
 
 interface TailLogStore {
   mode: 'tail'
+  connected: boolean
   count: number
   filter: string
   formatter: FormatterConfig
@@ -22,6 +23,7 @@ interface TailLogStore {
 }
 interface StaticLogStore {
   mode: 'static'
+  connected: boolean
   offsetStart: number
   maxMessages: number
   count: number
@@ -44,6 +46,7 @@ function createLogStore(initialValue?: LogStore) {
   if (!initialValue) {
     initialValue = {
       mode: 'tail',
+      connected: true,
       count: 0,
       filter: '',
       formatter: formatter.getFormatter(),
@@ -57,64 +60,91 @@ function createLogStore(initialValue?: LogStore) {
 
   // @ts-ignore JSL_ENVIRONMENT is being replaced by @rollup/plugin-replace
   const serverAddress = JSL_ENVIRONMENT == 'production' ? window.location.host : 'localhost:8000'
-  const ws = new WebSocket(`ws://${serverAddress}/`)
-  ws.onopen = function () {
-    console.log('WebSocket Client Connected')
-    sendToServer({ mode: 'tail', filter: '', maxMessages: DEFAULT_WINDOW_SIZE })
-  }
-  ws.onmessage = function (e) {
-    const msg = decode(e.data) as ServerMessage
-    update(currentValue => {
-      const columns = Object.keys(parseFormatter(currentValue.formatter.fn))
-      const logFormatter = formatLogMessage(currentValue.formatter.fn)
-      if (msg.type === 'init') {
-        if (msg.mode === 'tail') {
-          return {
-            mode: msg.mode,
-            count: msg.window.size,
-            filter: currentValue.filter,
-            formatter: currentValue.formatter,
-            columns,
-            maxMessages: currentValue.maxMessages,
-            window: msg.window.messages.map(logFormatter),
-            latest: [],
+
+  let ws: WebSocket
+
+  function connect() {
+    ws = new WebSocket(`ws://${serverAddress}/`)
+    ws.onopen = function () {
+      console.log('WebSocket Client Connected')
+      update(state => {
+        if (state.mode === 'tail') {
+          ws.send(encode({ mode: 'tail', filter: state.filter, maxMessages: state.maxMessages }))
+        } else {
+          ws.send(
+            encode({
+              mode: 'static',
+              offsetStart: state.offsetStart,
+              filter: state.filter,
+              maxMessages: state.maxMessages,
+            }),
+          )
+        }
+        return { ...state, connected: true }
+      })
+    }
+    ws.onclose = () => {
+      update(state => ({ ...state, connected: false }))
+      setTimeout(connect, 3000)
+    }
+    ws.onmessage = function (e) {
+      const msg = decode(e.data) as ServerMessage
+      update(currentValue => {
+        const columns = Object.keys(parseFormatter(currentValue.formatter.fn))
+        const logFormatter = formatLogMessage(currentValue.formatter.fn)
+        if (msg.type === 'init') {
+          if (msg.mode === 'tail') {
+            return {
+              mode: msg.mode,
+              connected: currentValue.connected,
+              count: msg.window.size,
+              filter: currentValue.filter,
+              formatter: currentValue.formatter,
+              columns,
+              maxMessages: currentValue.maxMessages,
+              window: msg.window.messages.map(logFormatter),
+              latest: [],
+            }
+          } else if (msg.mode === 'static') {
+            return {
+              mode: msg.mode,
+              connected: currentValue.connected,
+              count: msg.window.size,
+              filter: currentValue.filter,
+              formatter: currentValue.formatter,
+              columns,
+              offsetStart: msg.window.offsetStart,
+              maxMessages: msg.window.maxMessages,
+              window: msg.window.messages.map(logFormatter),
+              latest: [],
+            }
           }
-        } else if (msg.mode === 'static') {
-          return {
-            mode: msg.mode,
-            count: msg.window.size,
-            filter: currentValue.filter,
-            formatter: currentValue.formatter,
-            columns,
-            offsetStart: msg.window.offsetStart,
-            maxMessages: msg.window.maxMessages,
-            window: msg.window.messages.map(logFormatter),
-            latest: [],
+        } else if (msg.type === 'update') {
+          if (currentValue.mode === 'tail') {
+            return {
+              ...currentValue,
+              count: msg.size,
+              window: [
+                ...currentValue.window.slice(-currentValue.maxMessages + 1),
+                logFormatter(msg.message),
+              ],
+            }
+          } else if (currentValue.mode === 'static') {
+            return {
+              ...currentValue,
+              count: msg.size,
+              latest: [
+                ...currentValue.latest.slice(-LATEST_LOG_WINDOW_SIZE),
+                logFormatter(msg.message),
+              ],
+            }
           }
         }
-      } else if (msg.type === 'update') {
-        if (currentValue.mode === 'tail') {
-          return {
-            ...currentValue,
-            count: msg.size,
-            window: [
-              ...currentValue.window.slice(-currentValue.maxMessages + 1),
-              logFormatter(msg.message),
-            ],
-          }
-        } else if (currentValue.mode === 'static') {
-          return {
-            ...currentValue,
-            count: msg.size,
-            latest: [
-              ...currentValue.latest.slice(-LATEST_LOG_WINDOW_SIZE),
-              logFormatter(msg.message),
-            ],
-          }
-        }
-      }
-    })
+      })
+    }
   }
+
+  connect()
 
   const sendToServer = (msg: ClientMessage) => ws.send(encode(msg))
 

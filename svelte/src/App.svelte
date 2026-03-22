@@ -139,6 +139,10 @@
     />
   {/if}
 
+  {#if !$logStore.connected}
+    <div class="message message--warning">Connection lost — attempting to reconnect…</div>
+  {/if}
+
   <h1>
     Web log viewer
     <small><strong>{$logStore.count}</strong> messages</small>
@@ -323,5 +327,11 @@
     border-color: #0c5460;
     color: #0c5460;
     background-color: #0c546022;
+  }
+  .message--warning {
+    text-align: center;
+    border-color: #856404;
+    color: #856404;
+    background-color: #fff3cd;
   }
 </style>
